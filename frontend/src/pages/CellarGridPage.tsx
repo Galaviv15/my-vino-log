@@ -12,6 +12,8 @@ interface LocalWine {
   winery?: string;
   region?: string;
   country?: string;
+  location?: string;
+  rowId?: number;
 }
 
 interface WineSuggestion {
@@ -35,11 +37,14 @@ export default function CellarGridPage() {
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [page, setPage] = useState(1);
   const pageSize = 10;
+  const [viewMode, setViewMode] = useState<'list' | 'fridge'>('list');
   const [formData, setFormData] = useState({
     name: '',
     type: '',
     vintage: '',
     quantity: '1',
+    location: 'CELLAR',
+    rowId: '',
   });
   const [suggestions, setSuggestions] = useState<WineSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -162,6 +167,8 @@ export default function CellarGridPage() {
           type: formData.type || null,
           vintage: vintageValue || null,
           quantity: normalizedQuantity,
+          location: formData.location || 'CELLAR',
+          rowId: formData.rowId ? Number(formData.rowId) : null,
           winery: editingWine.winery || null,
           region: editingWine.region || null,
           country: editingWine.country || null,
@@ -177,12 +184,14 @@ export default function CellarGridPage() {
           type: formData.type || null,
           vintage: vintageValue || null,
           quantity: normalizedQuantity,
+          location: formData.location || 'CELLAR',
+          rowId: formData.rowId ? Number(formData.rowId) : null,
           imageUrl: '/wine-placeholder.svg',
         });
         setWines((prev) => [response.data, ...prev]);
         setPage(1);
       }
-      setFormData({ name: '', type: '', vintage: '', quantity: '1' });
+      setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'CELLAR', rowId: '' });
       setFormErrors({});
       setShowSuggestions(false);
     } catch (error) {
@@ -198,6 +207,8 @@ export default function CellarGridPage() {
       type: suggestion.type,
       vintage: suggestion.vintage,
       quantity: '1',
+      location: 'CELLAR',
+      rowId: '',
     });
     setFormErrors((prev) => ({
       ...prev,
@@ -215,6 +226,8 @@ export default function CellarGridPage() {
       type: wine.type || '',
       vintage: wine.vintage || '',
       quantity: String(wine.quantity || 1),
+      location: wine.location || 'CELLAR',
+      rowId: wine.rowId ? String(wine.rowId) : '',
     });
     setFormErrors({});
     setShowSuggestions(false);
@@ -222,7 +235,7 @@ export default function CellarGridPage() {
 
   const handleEditCancel = () => {
     setEditingWine(null);
-    setFormData({ name: '', type: '', vintage: '', quantity: '1' });
+    setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'CELLAR', rowId: '' });
     setFormErrors({});
     setShowSuggestions(false);
   };
@@ -377,6 +390,36 @@ export default function CellarGridPage() {
               )}
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t('wines.location')}
+              </label>
+              <select
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+              >
+                <option value="CELLAR">Cellar</option>
+                <option value="FRIDGE">Fridge</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Row ID
+              </label>
+              <input
+                type="number"
+                name="rowId"
+                min={1}
+                value={formData.rowId}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+                placeholder="Optional row number"
+              />
+            </div>
+
             <div className="sm:col-span-2">
               <div className="flex flex-wrap gap-3">
                 <button
@@ -400,6 +443,29 @@ export default function CellarGridPage() {
           </form>
         </div>
 
+        <div className="flex gap-2 mb-6">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              viewMode === 'list'
+                ? 'bg-wine-600 text-white'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {t('wines.list_view')}
+          </button>
+          <button
+            onClick={() => setViewMode('fridge')}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              viewMode === 'fridge'
+                ? 'bg-wine-600 text-white'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {t('wines.fridge_view')}
+          </button>
+        </div>
+
         <div className="card">
           <h2 className="text-xl font-semibold text-wine-900 mb-4">{t('dashboard.my_collection')}</h2>
           {loadingWines ? (
@@ -409,8 +475,11 @@ export default function CellarGridPage() {
           ) : wines.length === 0 ? (
             <p className="text-gray-600">{t('cellar.empty')}</p>
           ) : (
-            <div className="grid gap-3">
-              {pagedWines.map((wine) => (
+            <div>
+              {viewMode === 'list' ? (
+                // LIST VIEW
+                <div className="grid gap-3">
+                  {pagedWines.map((wine) => (
                 <div key={wine.id} className="flex flex-wrap items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-3">
@@ -465,6 +534,78 @@ export default function CellarGridPage() {
                       >
                         {pageNumber}
                       </button>
+                    );
+                  })}
+                </div>
+              )}
+              ) : (
+                // FRIDGE VIEW
+                <div className="grid gap-6">
+                  {['FRIDGE', 'CELLAR'].map((location) => {
+                    const locationWines = wines.filter((w) => (w.location || 'CELLAR') === location);
+                    if (locationWines.length === 0) return null;
+
+                    const winesByRow = locationWines.reduce((acc, wine) => {
+                      const row = wine.rowId || 0;
+                      if (!acc[row]) acc[row] = [];
+                      acc[row].push(wine);
+                      return acc;
+                    }, {} as Record<number, LocalWine[]>);
+
+                    return (
+                      <div key={location} className="border rounded-lg p-4 bg-white">
+                        <h3 className="text-lg font-semibold text-wine-900 mb-4">
+                          {location === 'FRIDGE' ? '🧊 Fridge' : '🍷 Cellar'}
+                        </h3>
+                        <div className="grid gap-3">
+                          {Object.entries(winesByRow)
+                            .sort(([rowA], [rowB]) => Number(rowA) - Number(rowB))
+                            .map(([row, rowWines]) => (
+                              <div key={row} className="border-l-4 border-wine-300 pl-4">
+                                {row !== '0' && (
+                                  <p className="text-sm font-medium text-gray-600 mb-2">Row {row}</p>
+                                )}
+                                <div className="grid gap-2">
+                                  {rowWines.map((wine) => (
+                                    <div key={wine.id} className="flex flex-wrap items-center justify-between gap-3 p-2 bg-cream/50 rounded">
+                                      <div className="flex items-center gap-3">
+                                        <img
+                                          src={wine.imageUrl || '/wine-placeholder.svg'}
+                                          alt="Wine"
+                                          className="w-8 h-8 rounded object-cover border border-cream"
+                                        />
+                                        <div>
+                                          <div className="font-medium text-wine-900 text-sm">{wine.name}</div>
+                                          <div className="text-xs text-gray-500">
+                                            {wine.type || 'Type'} · {wine.vintage || 'Vintage'}
+                                          </div>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <div className="text-sm font-semibold text-wine-600">x{wine.quantity}</div>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleEditStart(wine)}
+                                          className="px-2 py-1 rounded-md bg-wine-50 text-wine-700 text-xs font-semibold border border-wine-100 hover:bg-wine-100 transition"
+                                        >
+                                          {t('wines.edit_wine')}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDelete(wine.id)}
+                                          disabled={deletingWineId === wine.id}
+                                          className="px-2 py-1 rounded-md bg-red-50 text-red-700 text-xs font-semibold border border-red-100 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          {t('wines.delete_wine')}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

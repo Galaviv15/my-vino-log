@@ -75,6 +75,8 @@ public class WineService {
         wine.setWinery(trimToNull(request.getWinery()));
         wine.setRegion(trimToNull(request.getRegion()));
         wine.setCountry(trimToNull(request.getCountry()));
+        wine.setLocation(toWineLocation(request.getLocation()));
+        wine.setRowId(request.getRowId());
 
         String imageUrl = trimToNull(request.getImageUrl());
         wine.setImageUrl(imageUrl == null ? DEFAULT_IMAGE : imageUrl);
@@ -131,8 +133,20 @@ public class WineService {
         return type.name();
     }
 
+    private Wine.WineLocation toWineLocation(String location) {
+        if (location == null || location.trim().isEmpty()) {
+            return Wine.WineLocation.CELLAR;
+        }
+        try {
+            return Wine.WineLocation.valueOf(location.trim().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            return Wine.WineLocation.CELLAR;
+        }
+    }
+
     private WineResponse toResponse(Wine wine) {
         String vintage = wine.getVintageYear() == null ? null : wine.getVintageYear().toString();
+        String location = wine.getLocation() == null ? "CELLAR" : wine.getLocation().name();
         return new WineResponse(
                 wine.getId(),
                 wine.getWineName(),
@@ -142,7 +156,9 @@ public class WineService {
                 wine.getWinery(),
                 wine.getRegion(),
                 wine.getCountry(),
-                wine.getImageUrl()
+                wine.getImageUrl(),
+                location,
+                wine.getRowId()
         );
     }
 

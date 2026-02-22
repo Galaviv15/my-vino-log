@@ -12,6 +12,8 @@ public class WineRequest {
     private String region;
     private String country;
     private String imageUrl;
+    private String location = "CELLAR";
+    private Integer rowId;
 
     public String getName() {
         return name;
@@ -75,5 +77,21 @@ public class WineRequest {
 
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;
+    }
+
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
+    public Integer getRowId() {
+        return rowId;
+    }
+
+    public void setRowId(Integer rowId) {
+        this.rowId = rowId;
     }
 }

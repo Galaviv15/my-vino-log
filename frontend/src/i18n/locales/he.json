@@ -68,6 +68,7 @@
     "grape_variety": "זן ענבים",
     "alcohol": "אחוז אלכוהול",
     "quantity": "כמות",
+    "location": "מיקום",
     "price": "מחיר",
     "optimal_drink_by": "שתייה אופטימלית עד",
     "notes": "הערות",
@@ -79,7 +80,9 @@
     "manual_entry": "הזנה ידנית",
     "wine_added": "יין נוסף בהצלחה",
     "wine_updated": "יין עודכן בהצלחה",
-    "wine_deleted": "יין נמחק בהצלחה"
+    "wine_deleted": "יין נמחק בהצלחה",
+    "list_view": "תצוגת רשימה",
+    "fridge_view": "תצוגת מקרר"
   },
   "wines_types": {
     "red": "אדום",

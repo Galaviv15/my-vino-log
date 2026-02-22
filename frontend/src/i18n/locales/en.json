@@ -68,6 +68,7 @@
     "grape_variety": "Grape Variety",
     "alcohol": "Alcohol %",
     "quantity": "Quantity",
+    "location": "Location",
     "price": "Price",
     "optimal_drink_by": "Optimal Drink By",
     "notes": "Notes",
@@ -79,7 +80,9 @@
     "manual_entry": "Manual Entry",
     "wine_added": "Wine added successfully",
     "wine_updated": "Wine updated successfully",
-    "wine_deleted": "Wine deleted successfully"
+    "wine_deleted": "Wine deleted successfully",
+    "list_view": "List View",
+    "fridge_view": "Fridge View"
   },
   "wines_types": {
     "red": "Red",

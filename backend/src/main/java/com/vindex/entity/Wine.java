@@ -69,6 +69,14 @@ public class Wine {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "location")
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.VARCHAR)
+    private WineLocation location = WineLocation.CELLAR;
+
+    @Column(name = "row_id")
+    private Integer rowId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -77,5 +85,9 @@ public class Wine {
 
     public enum WineType {
         RED, WHITE, SPARKLING, ROSÉ, DESSERT, FORTIFIED
+    }
+
+    public enum WineLocation {
+        CELLAR, FRIDGE
     }
 }
