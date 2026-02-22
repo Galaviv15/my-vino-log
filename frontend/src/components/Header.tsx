@@ -26,7 +26,7 @@ export default function Header() {
           <h1 className="text-2xl font-bold">{t('common.app_name')}</h1>
         </div>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm sm:text-base ml-auto whitespace-nowrap flex-nowrap">
+        <nav className="hidden md:flex items-center gap-3 text-sm sm:text-base ml-auto whitespace-nowrap flex-nowrap">
           <button
             onClick={() => handleNavigate('/dashboard')}
             className="px-2 py-1 rounded-md font-semibold whitespace-nowrap hover:bg-white/10 transition"
@@ -48,7 +48,7 @@ export default function Header() {
 
           <button
             onClick={handleLogout}
-            className="px-3 py-1 bg-red-600 rounded-md hover:bg-red-700 transition text-sm font-semibold whitespace-nowrap mr-2"
+            className="px-3 py-1 bg-red-600 rounded-md hover:bg-red-700 transition text-sm font-semibold whitespace-nowrap"
           >
             {t('auth.logout')}
           </button>
@@ -60,7 +60,7 @@ export default function Header() {
             id="header-language"
             value={i18n.language}
             onChange={(e) => i18n.changeLanguage(e.target.value)}
-            className="px-2 py-1 bg-white/20 rounded-md border border-white/20 text-sm font-semibold text-white focus:ring-2 focus:ring-white/60 focus:border-transparent ml-6"
+            className="px-2 py-1 bg-white/20 rounded-md border border-white/20 text-sm font-semibold text-white focus:ring-2 focus:ring-white/60 focus:border-transparent"
           >
             <option value="en" className="text-gray-900">
               EN
@@ -103,34 +103,34 @@ export default function Header() {
           isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        <div className="px-4 sm:px-6 pb-4 flex flex-col gap-3">
+        <div className="px-4 sm:px-6 pb-4 flex flex-col gap-4">
           <button
             onClick={() => handleNavigate('/dashboard')}
-            className="text-left text-sm hover:opacity-80 transition"
+            className="text-center text-base font-semibold py-2 px-3 rounded-md hover:bg-white/10 transition"
           >
             {t('dashboard.title')}
           </button>
           <button
             onClick={() => handleNavigate('/cellar')}
-            className="text-left text-sm hover:opacity-80 transition"
+            className="text-center text-base font-semibold py-2 px-3 rounded-md hover:bg-white/10 transition"
           >
             {t('cellar.title')}
           </button>
           <button
             onClick={() => handleNavigate('/profile')}
-            className="text-left text-sm hover:opacity-80 transition"
+            className="text-center text-base font-semibold py-2 px-3 rounded-md hover:bg-white/10 transition"
           >
             {t('profile.title')}
           </button>
 
-          <div className="header-actions flex items-center gap-4 pt-2">
+          <div className="flex flex-col gap-3 pt-2">
             <button
               onClick={handleLogout}
-              className="px-3 py-1 bg-red-600 rounded hover:bg-red-700 transition text-sm"
+              className="px-3 py-2 bg-red-600 rounded-md hover:bg-red-700 transition text-base font-semibold"
             >
               {t('auth.logout')}
             </button>
-            <div className="header-language">
+            <div className="flex justify-center">
               <label className="sr-only" htmlFor="header-language-mobile">
                 {t('profile.language')}
               </label>
@@ -138,7 +138,7 @@ export default function Header() {
                 id="header-language-mobile"
                 value={i18n.language}
                 onChange={(e) => i18n.changeLanguage(e.target.value)}
-                className="px-2 py-1 bg-white/20 rounded border border-white/20 text-xs font-medium text-white focus:ring-2 focus:ring-white/60 focus:border-transparent"
+                className="px-3 py-2 bg-white/20 rounded-md border border-white/20 text-base font-semibold text-white focus:ring-2 focus:ring-white/60 focus:border-transparent"
               >
                 <option value="en" className="text-gray-900">
                   EN
