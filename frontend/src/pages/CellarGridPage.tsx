@@ -538,9 +538,10 @@ export default function CellarGridPage() {
                   })}
                 </div>
               )}
-              ) : (
-                // FRIDGE VIEW
-                <div className="grid gap-6">
+            </div>
+            ) : (
+              // FRIDGE VIEW
+              <div className="grid gap-6">
                   {['FRIDGE', 'CELLAR'].map((location) => {
                     const locationWines = wines.filter((w) => (w.location || 'CELLAR') === location);
                     if (locationWines.length === 0) return null;
