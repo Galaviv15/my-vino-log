@@ -272,20 +272,7 @@ export default function CellarGridPage() {
   return (
     <div className="min-h-screen bg-cream px-4 py-6 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold text-wine-900">{t('cellar.title')}</h1>
-          <button
-            onClick={() => {
-              setEditingWine(null);
-              setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'CELLAR', rowId: '' });
-              setFormErrors({});
-              setShowAddForm(true);
-            }}
-            className="px-6 py-3 rounded-lg bg-wine-600 text-white font-semibold hover:bg-wine-700 shadow-lg transition"
-          >
-            + {t('wines.add_wine')}
-          </button>
-        </div>
+        <h1 className="text-3xl font-bold text-wine-900 mb-6">{t('cellar.title')}</h1>
 
         <div className="flex gap-2 mb-6">
           <button
@@ -311,7 +298,20 @@ export default function CellarGridPage() {
         </div>
 
         <div className="card">
-          <h2 className="text-xl font-semibold text-wine-900 mb-4">{t('dashboard.my_collection')}</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-wine-900">{t('dashboard.my_collection')}</h2>
+            <button
+              onClick={() => {
+                setEditingWine(null);
+                setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'CELLAR', rowId: '' });
+                setFormErrors({});
+                setShowAddForm(true);
+              }}
+              className="px-4 py-2 rounded-lg bg-wine-600 text-white font-semibold hover:bg-wine-700 transition"
+            >
+              + {t('wines.add_wine')}
+            </button>
+          </div>
           {loadingWines ? (
             <p className="text-gray-600">{t('common.loading')}</p>
           ) : wineError ? (
