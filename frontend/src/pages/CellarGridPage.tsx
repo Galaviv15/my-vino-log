@@ -234,6 +234,7 @@ export default function CellarGridPage() {
     });
     setFormErrors({});
     setShowSuggestions(false);
+    setShowAddForm(true);
   };
 
   const handleEditCancel = () => {
