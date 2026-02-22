@@ -573,10 +573,11 @@ export default function CellarGridPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Location
+                      Location & Row
                     </p>
                     <p className="text-sm font-semibold text-gray-900 mt-1">
                       {selectedWine.location === 'FRIDGE' ? '🧊 Fridge' : '🍷 Cellar'}
+                      {selectedWine.rowId ? ` • Row ${selectedWine.rowId}` : ' • No row assigned'}
                     </p>
                   </div>
                 </div>
@@ -608,15 +609,6 @@ export default function CellarGridPage() {
                         <p className="text-sm text-gray-700">{selectedWine.country}</p>
                       </div>
                     )}
-                  </div>
-                )}
-
-                {selectedWine.rowId && (
-                  <div>
-                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Row ID
-                    </p>
-                    <p className="text-sm text-gray-700">Row {selectedWine.rowId}</p>
                   </div>
                 )}
 
