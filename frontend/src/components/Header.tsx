@@ -21,8 +21,8 @@ export default function Header() {
 
   return (
     <header className="fixed inset-x-0 top-0 w-full bg-wine-600 text-white shadow-lg z-50">
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between gap-3 ltr:flex-row rtl:flex-row-reverse">
+        <div className="flex items-center gap-3 rtl:flex-row-reverse">
           <h1 className="text-2xl font-bold">{t('common.app_name')}</h1>
         </div>
 
