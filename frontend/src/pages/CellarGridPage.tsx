@@ -38,6 +38,9 @@ export default function CellarGridPage() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [viewMode, setViewMode] = useState<'list' | 'fridge'>('list');
+  const [expandedShelf, setExpandedShelf] = useState<string | null>(null);
+  const [selectedWine, setSelectedWine] = useState<LocalWine | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: '',
@@ -238,6 +241,7 @@ export default function CellarGridPage() {
     setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'CELLAR', rowId: '' });
     setFormErrors({});
     setShowSuggestions(false);
+    setShowAddForm(false);
   };
 
   const handleDelete = async (wineId: number) => {
@@ -267,180 +271,19 @@ export default function CellarGridPage() {
   return (
     <div className="min-h-screen bg-cream px-4 py-6 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-wine-900 mb-6">{t('cellar.title')}</h1>
-
-        <div className="card mb-6">
-          <h2 className="text-xl font-semibold text-wine-900 mb-4">
-            {editingWine ? t('wines.edit_wine') : t('wines.add_wine')}
-          </h2>
-          <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2" autoComplete="off">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('wines.wine_name')}
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  onFocus={() => setShowSuggestions(true)}
-                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                  autoComplete="off"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
-                  placeholder="Cabernet Sauvignon"
-                  required
-                />
-                {formErrors.name && (
-                  <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>
-                )}
-                {showSuggestions && (loadingSuggestions || suggestions.length > 0) && (
-                  <div className="absolute z-20 mt-2 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
-                    {loadingSuggestions ? (
-                      <div className="px-4 py-3 text-sm text-gray-500">{t('common.loading')}</div>
-                    ) : (
-                      <div className="max-h-64 overflow-y-auto">
-                        {suggestions.map((suggestion) => (
-                          <button
-                            type="button"
-                            key={`${suggestion.name}-${suggestion.vintage}-${suggestion.winery}`}
-                            onClick={() => handleSuggestionPick(suggestion)}
-                            className="w-full px-4 py-3 text-left hover:bg-cream/60 transition flex items-center gap-3"
-                          >
-                            <img
-                              src={suggestion.imageUrl || '/wine-placeholder.svg'}
-                              alt="Wine"
-                              className="w-10 h-10 rounded-md object-cover border border-cream"
-                            />
-                            <div>
-                              <div className="font-medium text-wine-900">{suggestion.name}</div>
-                              <div className="text-xs text-gray-500">
-                                {suggestion.winery} · {suggestion.region} · {suggestion.country}
-                              </div>
-                            </div>
-                          </button>
-                        ))}
-                        {suggestions.length === 0 && (
-                          <div className="px-4 py-3 text-sm text-gray-500">No matches found.</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('wines.wine_type')}
-              </label>
-              <select
-                name="type"
-                value={formData.type}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
-                required
-              >
-                <option value="">Select</option>
-                {wineTypeOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              {formErrors.type && (
-                <p className="mt-1 text-xs text-red-600">{formErrors.type}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('wines.vintage')}
-              </label>
-              <input
-                type="text"
-                name="vintage"
-                value={formData.vintage}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
-                placeholder="2018"
-                required
-              />
-              {formErrors.vintage && (
-                <p className="mt-1 text-xs text-red-600">{formErrors.vintage}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('wines.quantity')}
-              </label>
-              <input
-                type="number"
-                name="quantity"
-                min={1}
-                value={formData.quantity}
-                onChange={handleChange}
-                onFocus={(e) => e.currentTarget.select()}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
-                required
-              />
-              {formErrors.quantity && (
-                <p className="mt-1 text-xs text-red-600">{formErrors.quantity}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {t('wines.location')}
-              </label>
-              <select
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
-              >
-                <option value="CELLAR">Cellar</option>
-                <option value="FRIDGE">Fridge</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Row ID
-              </label>
-              <input
-                type="number"
-                name="rowId"
-                min={1}
-                value={formData.rowId}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
-                placeholder="Optional row number"
-              />
-            </div>
-
-            <div className="sm:col-span-2">
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="submit"
-                  disabled={savingWine}
-                  className="px-5 py-2.5 rounded-lg bg-wine-600 text-white font-semibold shadow-sm hover:bg-wine-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {editingWine ? t('wines.edit_wine') : t('wines.add_wine')}
-                </button>
-                {editingWine && (
-                  <button
-                    type="button"
-                    onClick={handleEditCancel}
-                    className="px-5 py-2.5 rounded-lg bg-white border border-gray-300 text-gray-700 font-semibold shadow-sm hover:bg-gray-50 transition"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                )}
-              </div>
-            </div>
-          </form>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold text-wine-900">{t('cellar.title')}</h1>
+          <button
+            onClick={() => {
+              setEditingWine(null);
+              setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'CELLAR', rowId: '' });
+              setFormErrors({});
+              setShowAddForm(true);
+            }}
+            className="px-6 py-3 rounded-lg bg-wine-600 text-white font-semibold hover:bg-wine-700 shadow-lg transition"
+          >
+            + {t('wines.add_wine')}
+          </button>
         </div>
 
         <div className="flex gap-2 mb-6">
@@ -480,15 +323,15 @@ export default function CellarGridPage() {
                 // LIST VIEW
                 <div className="grid gap-3">
                   {pagedWines.map((wine) => (
-                <div key={wine.id} className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
+                <div key={wine.id} className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:shadow-lg cursor-pointer transition" onClick={() => setSelectedWine(wine)}>
+                  <div className="flex-1">
                     <div className="flex items-center gap-3">
                       <img
                         src={wine.imageUrl || '/wine-placeholder.svg'}
                         alt="Wine"
                         className="w-10 h-10 rounded-md object-cover border border-cream"
                       />
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <div className="font-medium text-wine-900">{wine.name}</div>
                         <div className="text-sm text-gray-500">
                             {wine.type || 'Type'} · {wine.vintage || 'Vintage'}
@@ -496,24 +339,7 @@ export default function CellarGridPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm font-semibold text-wine-600">x{wine.quantity}</div>
-                    <button
-                      type="button"
-                      onClick={() => handleEditStart(wine)}
-                      className="px-3 py-1.5 rounded-md bg-wine-50 text-wine-700 text-xs font-semibold border border-wine-100 hover:bg-wine-100 transition"
-                    >
-                      {t('wines.edit_wine')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(wine.id)}
-                      disabled={deletingWineId === wine.id}
-                      className="px-3 py-1.5 rounded-md bg-red-50 text-red-700 text-xs font-semibold border border-red-100 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {t('wines.delete_wine')}
-                    </button>
-                  </div>
+                  <div className="text-sm font-semibold text-wine-600">x{wine.quantity}</div>
                 </div>
               ))}
               {totalPages > 1 && (
@@ -541,79 +367,483 @@ export default function CellarGridPage() {
             </div>
             ) : (
               // FRIDGE VIEW
-              <div className="grid gap-6">
-                  {['FRIDGE', 'CELLAR'].map((location) => {
-                    const locationWines = wines.filter((w) => (w.location || 'CELLAR') === location);
-                    if (locationWines.length === 0) return null;
+              <div className="grid gap-8">
+                {['FRIDGE', 'CELLAR'].map((location) => {
+                  const locationWines = wines.filter((w) => (w.location || 'CELLAR') === location);
+                  if (locationWines.length === 0) return null;
 
-                    const winesByRow = locationWines.reduce((acc, wine) => {
-                      const row = wine.rowId || 0;
-                      if (!acc[row]) acc[row] = [];
-                      acc[row].push(wine);
-                      return acc;
-                    }, {} as Record<number, LocalWine[]>);
+                  const winesByRow = locationWines.reduce((acc, wine) => {
+                    const row = wine.rowId || 0;
+                    if (!acc[row]) acc[row] = [];
+                    acc[row].push(wine);
+                    return acc;
+                  }, {} as Record<number, LocalWine[]>);
 
-                    return (
-                      <div key={location} className="border rounded-lg p-4 bg-white">
-                        <h3 className="text-lg font-semibold text-wine-900 mb-4">
-                          {location === 'FRIDGE' ? '🧊 Fridge' : '🍷 Cellar'}
+                  const isFridge = location === 'FRIDGE';
+                  const shelfIds = Object.keys(winesByRow).sort((a, b) => Number(a) - Number(b));
+
+                  return (
+                    <div
+                      key={location}
+                      className={`relative rounded-lg overflow-hidden shadow-2xl ${
+                        isFridge
+                          ? 'bg-gradient-to-b from-slate-400 to-slate-500 border-4 border-slate-600'
+                          : 'bg-gradient-to-b from-amber-900 to-amber-800 border-4 border-amber-950'
+                      }`}
+                    >
+                      {/* Fridge header */}
+                      <div
+                        className={`px-6 py-4 ${
+                          isFridge
+                            ? 'bg-gradient-to-r from-slate-500 to-slate-600'
+                            : 'bg-gradient-to-r from-amber-800 to-amber-900'
+                        } text-white flex items-center justify-between`}
+                      >
+                        <h3 className="text-2xl font-bold flex items-center gap-2">
+                          {isFridge ? '🧊 Fridge' : '🍷 Wine Cellar'}
                         </h3>
-                        <div className="grid gap-3">
-                          {Object.entries(winesByRow)
-                            .sort(([rowA], [rowB]) => Number(rowA) - Number(rowB))
-                            .map(([row, rowWines]) => (
-                              <div key={row} className="border-l-4 border-wine-300 pl-4">
-                                {row !== '0' && (
-                                  <p className="text-sm font-medium text-gray-600 mb-2">Row {row}</p>
-                                )}
-                                <div className="grid gap-2">
-                                  {rowWines.map((wine) => (
-                                    <div key={wine.id} className="flex flex-wrap items-center justify-between gap-3 p-2 bg-cream/50 rounded">
-                                      <div className="flex items-center gap-3">
-                                        <img
-                                          src={wine.imageUrl || '/wine-placeholder.svg'}
-                                          alt="Wine"
-                                          className="w-8 h-8 rounded object-cover border border-cream"
-                                        />
-                                        <div>
-                                          <div className="font-medium text-wine-900 text-sm">{wine.name}</div>
-                                          <div className="text-xs text-gray-500">
-                                            {wine.type || 'Type'} · {wine.vintage || 'Vintage'}
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <div className="text-sm font-semibold text-wine-600">x{wine.quantity}</div>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleEditStart(wine)}
-                                          className="px-2 py-1 rounded-md bg-wine-50 text-wine-700 text-xs font-semibold border border-wine-100 hover:bg-wine-100 transition"
-                                        >
-                                          {t('wines.edit_wine')}
-                                        </button>
-                                        <button
-                                          type="button"
-                                          onClick={() => handleDelete(wine.id)}
-                                          disabled={deletingWineId === wine.id}
-                                          className="px-2 py-1 rounded-md bg-red-50 text-red-700 text-xs font-semibold border border-red-100 hover:bg-red-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                          {t('wines.delete_wine')}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
+                        <div className="text-sm font-semibold opacity-75">
+                          {locationWines.length} wine{locationWines.length !== 1 ? 's' : ''}
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+
+                      {/* Shelves container */}
+                      <div className={`p-4 space-y-3 ${isFridge ? 'bg-slate-100' : 'bg-amber-100'}`}>
+                        {shelfIds.map((shelfId) => {
+                          const shelfKey = `${location}-${shelfId}`;
+                          const isExpanded = expandedShelf === shelfKey;
+                          const shelfWines = winesByRow[shelfId];
+                          const shelfLabel = shelfId === '0' ? 'Unsorted' : `Row ${shelfId}`;
+
+                          return (
+                            <div
+                              key={shelfId}
+                              className={`transition-all duration-300 rounded-lg overflow-hidden ${
+                                isFridge ? 'bg-white' : 'bg-yellow-50'
+                              } border-2 ${isFridge ? 'border-slate-300' : 'border-amber-300'}`}
+                            >
+                              {/* Shelf header (clickable) */}
+                              <button
+                                onClick={() =>
+                                  setExpandedShelf(isExpanded ? null : shelfKey)
+                                }
+                                className={`w-full px-4 py-3 flex items-center justify-between font-semibold transition-all hover:opacity-90 ${
+                                  isExpanded
+                                    ? isFridge
+                                      ? 'bg-slate-300'
+                                      : 'bg-amber-300'
+                                    : isFridge
+                                    ? 'bg-slate-200'
+                                    : 'bg-amber-200'
+                                }`}
+                              >
+                                <span className="flex items-center gap-2">
+                                  <span className="text-lg">
+                                    {isExpanded ? '▼' : '▶'}
+                                  </span>
+                                  <span className="text-gray-900">{shelfLabel}</span>
+                                  <span className="text-xs font-normal text-gray-600">
+                                    ({shelfWines.length})
+                                  </span>
+                                </span>
+                              </button>
+
+                              {/* Shelf contents (expandable) */}
+                              {isExpanded && (
+                                <div
+                                  className={`px-4 py-3 space-y-2 border-t-2 ${
+                                    isFridge ? 'border-slate-200' : 'border-amber-200'
+                                  } transition-all duration-300`}
+                                >
+                                  {shelfWines.length === 0 ? (
+                                    <p className="text-gray-500 text-sm py-2">
+                                      No wines in this shelf
+                                    </p>
+                                  ) : (
+                                    shelfWines.map((wine) => (
+                                      <div
+                                        key={wine.id}
+                                        className={`flex items-center justify-between gap-3 p-2 rounded transition-all cursor-pointer hover:shadow-md ${
+                                          isFridge
+                                            ? 'bg-blue-50 hover:bg-blue-100'
+                                            : 'bg-amber-50 hover:bg-amber-100'
+                                        }`}
+                                        onClick={() => setSelectedWine(wine)}
+                                      >
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                          <img
+                                            src={
+                                              wine.imageUrl ||
+                                              '/wine-placeholder.svg'
+                                            }
+                                            alt="Wine"
+                                            className="w-10 h-10 rounded object-cover border-2 border-gray-300"
+                                          />
+                                          <div className="min-w-0">
+                                            <div className="font-semibold text-gray-900 truncate">
+                                              {wine.name}
+                                            </div>
+                                            <div className="text-xs text-gray-600 truncate">
+                                              {wine.type || 'Type'} ·{' '}
+                                              {wine.vintage || 'Vintage'}
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <span className="font-semibold text-wine-600 bg-white px-2 py-1 rounded text-sm whitespace-nowrap">
+                                          ×{wine.quantity}
+                                        </span>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             </div>
           )}
         </div>
+
+        {/* Wine Detail Modal */}
+        {selectedWine && (
+          <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in"
+            onClick={() => setSelectedWine(null)}
+          >
+            <div
+              className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Image */}
+              <div className="relative h-48 bg-gray-100 overflow-hidden">
+                <img
+                  src={selectedWine.imageUrl || '/wine-placeholder.svg'}
+                  alt={selectedWine.name}
+                  className="w-full h-full object-cover"
+                />
+                <button
+                  onClick={() => setSelectedWine(null)}
+                  className="absolute top-2 right-2 bg-white rounded-full p-2 hover:bg-gray-100 transition shadow-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-4">
+                {/* Title */}
+                <div>
+                  <h2 className="text-2xl font-bold text-wine-900">
+                    {selectedWine.name}
+                  </h2>
+                </div>
+
+                {/* Basic Info Grid */}
+                <div className="grid grid-cols-2 gap-4 py-4 border-y border-gray-200">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Type
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">
+                      {selectedWine.type || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Vintage
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">
+                      {selectedWine.vintage || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Quantity
+                    </p>
+                    <p className="text-sm font-semibold text-wine-600 mt-1">
+                      ×{selectedWine.quantity}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Location
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900 mt-1">
+                      {selectedWine.location === 'FRIDGE' ? '🧊 Fridge' : '🍷 Cellar'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Details */}
+                {(selectedWine.winery || selectedWine.region || selectedWine.country) && (
+                  <div className="space-y-2">
+                    {selectedWine.winery && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                          Winery
+                        </p>
+                        <p className="text-sm text-gray-700">{selectedWine.winery}</p>
+                      </div>
+                    )}
+                    {selectedWine.region && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                          Region
+                        </p>
+                        <p className="text-sm text-gray-700">{selectedWine.region}</p>
+                      </div>
+                    )}
+                    {selectedWine.country && (
+                      <div>
+                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                          Country
+                        </p>
+                        <p className="text-sm text-gray-700">{selectedWine.country}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {selectedWine.rowId && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Row ID
+                    </p>
+                    <p className="text-sm text-gray-700">Row {selectedWine.rowId}</p>
+                  </div>
+                )}
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => {
+                      handleEditStart(selectedWine);
+                      setSelectedWine(null);
+                    }}
+                    className="flex-1 px-4 py-2 bg-wine-600 text-white font-semibold rounded-lg hover:bg-wine-700 transition"
+                  >
+                    {t('wines.edit_wine')}
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleDelete(selectedWine.id);
+                      setSelectedWine(null);
+                    }}
+                    disabled={deletingWineId === selectedWine.id}
+                    className="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t('wines.delete_wine')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit Wine Modal */}
+        {showAddForm && (
+          <div
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in"
+            onClick={() => handleEditCancel()}
+          >
+            <div
+              className="bg-white rounded-lg shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white">
+                <h2 className="text-xl font-bold text-wine-900">
+                  {editingWine ? t('wines.edit_wine') : t('wines.add_wine')}
+                </h2>
+                <button
+                  onClick={() => handleEditCancel()}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Form Content */}
+              <form onSubmit={handleSubmit} className="p-6 space-y-4" autoComplete="off">
+                {/* Wine Name */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('wines.wine_name')}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      onFocus={() => setShowSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                      autoComplete="off"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+                      placeholder="Cabernet Sauvignon"
+                      required
+                    />
+                    {formErrors.name && (
+                      <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>
+                    )}
+                    {showSuggestions && (loadingSuggestions || suggestions.length > 0) && (
+                      <div className="absolute z-20 mt-2 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+                        {loadingSuggestions ? (
+                          <div className="px-4 py-3 text-sm text-gray-500">{t('common.loading')}</div>
+                        ) : (
+                          <div className="max-h-64 overflow-y-auto">
+                            {suggestions.map((suggestion) => (
+                              <button
+                                type="button"
+                                key={`${suggestion.name}-${suggestion.vintage}-${suggestion.winery}`}
+                                onClick={() => handleSuggestionPick(suggestion)}
+                                className="w-full px-4 py-3 text-left hover:bg-cream/60 transition flex items-center gap-3"
+                              >
+                                <img
+                                  src={suggestion.imageUrl || '/wine-placeholder.svg'}
+                                  alt="Wine"
+                                  className="w-10 h-10 rounded-md object-cover border border-cream"
+                                />
+                                <div>
+                                  <div className="font-medium text-wine-900">{suggestion.name}</div>
+                                  <div className="text-xs text-gray-500">
+                                    {suggestion.winery} · {suggestion.region} · {suggestion.country}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                            {suggestions.length === 0 && (
+                              <div className="px-4 py-3 text-sm text-gray-500">No matches found.</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Type & Vintage */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('wines.wine_type')}
+                    </label>
+                    <select
+                      name="type"
+                      value={formData.type}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+                      required
+                    >
+                      <option value="">Select</option>
+                      {wineTypeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                    {formErrors.type && (
+                      <p className="mt-1 text-xs text-red-600">{formErrors.type}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('wines.vintage')}
+                    </label>
+                    <input
+                      type="text"
+                      name="vintage"
+                      value={formData.vintage}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+                      placeholder="2018"
+                      required
+                    />
+                    {formErrors.vintage && (
+                      <p className="mt-1 text-xs text-red-600">{formErrors.vintage}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quantity & Location */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('wines.quantity')}
+                    </label>
+                    <input
+                      type="number"
+                      name="quantity"
+                      min={1}
+                      value={formData.quantity}
+                      onChange={handleChange}
+                      onFocus={(e) => e.currentTarget.select()}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+                      required
+                    />
+                    {formErrors.quantity && (
+                      <p className="mt-1 text-xs text-red-600">{formErrors.quantity}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      {t('wines.location')}
+                    </label>
+                    <select
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+                    >
+                      <option value="CELLAR">Cellar</option>
+                      <option value="FRIDGE">Fridge</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Row ID */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Row ID (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    name="rowId"
+                    min={1}
+                    value={formData.rowId}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+                    placeholder="e.g. 1, 2, 3..."
+                  />
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    type="submit"
+                    disabled={savingWine}
+                    className="flex-1 px-4 py-2 bg-wine-600 text-white font-semibold rounded-lg hover:bg-wine-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {editingWine ? t('wines.edit_wine') : t('wines.add_wine')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleEditCancel()}
+                    className="flex-1 px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
