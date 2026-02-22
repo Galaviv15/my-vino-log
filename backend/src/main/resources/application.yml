@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: vindex-backend
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQL8Dialect
+  datasource:
+    url: jdbc:mysql://localhost:3306/vindex_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: vindex_user
+    password: vindex_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  flyway:
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+jwt:
+  secret: your-secret-key-change-this-in-production-must-be-at-least-256-bits-long
+  expiration: 3600000
+  refresh-expiration: 2592000000
+
+logging:
+  level:
+    root: INFO
+    com.vindex: DEBUG
+
+snooth:
+  api:
+    base-url: ${SNOOTH_API_BASE_URL:https://api.snooth.com/wines/}
+    key: ${SNOOTH_API_KEY:}

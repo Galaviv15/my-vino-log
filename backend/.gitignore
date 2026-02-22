@@ -1,0 +1,14 @@
+# Backend .gitignore
+target/
+.class
+*.jar
+*.war
+.DS_Store
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.log
+.env
+node_modules/

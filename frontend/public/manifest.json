@@ -1,0 +1,57 @@
+{
+  "name": "Vino Log - Smart Wine Cellar",
+  "short_name": "Vino Log",
+  "description": "Manage your personal wine collection with visual fridge mapping",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#8b3f48",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-1.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    }
+  ],
+  "categories": ["lifestyle", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Add Wine",
+      "short_name": "Add",
+      "description": "Add a new wine to your collection",
+      "url": "/dashboard?action=add",
+      "icons": [
+        {
+          "src": "/shortcut-add.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "View Cellar",
+      "short_name": "Cellar",
+      "description": "View your wine cellar grid",
+      "url": "/cellar",
+      "icons": [
+        {
+          "src": "/shortcut-cellar.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}
