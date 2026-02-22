@@ -52,6 +52,7 @@ export default function CellarGridPage() {
   const [suggestions, setSuggestions] = useState<WineSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'year' | 'row'>('name');
 
   const wineTypeOptions = useMemo(
     () => [
@@ -267,7 +268,30 @@ export default function CellarGridPage() {
 
   const totalPages = Math.max(1, Math.ceil(wines.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const pagedWines = wines.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  
+  const sortedWines = useMemo(() => {
+    const winesCopy = [...wines];
+    switch (sortBy) {
+      case 'name':
+        return winesCopy.sort((a, b) => a.name.localeCompare(b.name));
+      case 'year':
+        return winesCopy.sort((a, b) => {
+          const yearA = a.vintage ? parseInt(a.vintage) : 0;
+          const yearB = b.vintage ? parseInt(b.vintage) : 0;
+          return yearB - yearA; // Descending (newest first)
+        });
+      case 'row':
+        return winesCopy.sort((a, b) => {
+          const rowA = a.rowId || 0;
+          const rowB = b.rowId || 0;
+          return rowA - rowB;
+        });
+      default:
+        return winesCopy;
+    }
+  }, [wines, sortBy]);
+  
+  const pagedWines = sortedWines.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="min-h-screen bg-cream px-4 py-6 sm:px-6 lg:px-8">
@@ -296,6 +320,41 @@ export default function CellarGridPage() {
             {t('wines.fridge_view')}
           </button>
         </div>
+
+        {viewMode === 'list' && (
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setSortBy('name')}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
+                sortBy === 'name'
+                  ? 'bg-wine-600 text-white'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Sort by Name
+            </button>
+            <button
+              onClick={() => setSortBy('year')}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
+                sortBy === 'year'
+                  ? 'bg-wine-600 text-white'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Sort by Year
+            </button>
+            <button
+              onClick={() => setSortBy('row')}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
+                sortBy === 'row'
+                  ? 'bg-wine-600 text-white'
+                  : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Sort by Row
+            </button>
+          </div>
+        )}
 
         <div className="card">
           <div className="flex items-center justify-between mb-4">
