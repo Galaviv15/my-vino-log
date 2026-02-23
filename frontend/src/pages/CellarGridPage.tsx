@@ -467,6 +467,9 @@ export default function CellarGridPage() {
                             <div className="text-sm text-gray-500">
                               {wine.type || 'Type'} · {wine.vintage || 'Vintage'}
                             </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              Winery: {wine.winery || '—'} · Grape: {wine.grapeVariety || '—'}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -619,6 +622,9 @@ export default function CellarGridPage() {
                                               {wine.type || 'Type'} ·{' '}
                                               {wine.vintage || 'Vintage'}
                                             </div>
+                                            <div className="text-[11px] text-gray-500 truncate">
+                                              Winery: {wine.winery || '—'} · Grape: {wine.grapeVariety || '—'}
+                                            </div>
                                           </div>
                                         </div>
                                         <span className="font-semibold text-wine-600 bg-white px-2 py-1 rounded text-sm whitespace-nowrap">
@@ -714,34 +720,36 @@ export default function CellarGridPage() {
                 </div>
 
                 {/* Details */}
-                {(selectedWine.winery || selectedWine.region || selectedWine.country) && (
-                  <div className="space-y-2">
-                    {selectedWine.winery && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                          Winery
-                        </p>
-                        <p className="text-sm text-gray-700">{selectedWine.winery}</p>
-                      </div>
-                    )}
-                    {selectedWine.region && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                          Region
-                        </p>
-                        <p className="text-sm text-gray-700">{selectedWine.region}</p>
-                      </div>
-                    )}
-                    {selectedWine.country && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                          Country
-                        </p>
-                        <p className="text-sm text-gray-700">{selectedWine.country}</p>
-                      </div>
-                    )}
+                <div className="space-y-2">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Winery
+                    </p>
+                    <p className="text-sm text-gray-700">{selectedWine.winery || '—'}</p>
                   </div>
-                )}
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                      Grape Variety
+                    </p>
+                    <p className="text-sm text-gray-700">{selectedWine.grapeVariety || '—'}</p>
+                  </div>
+                  {selectedWine.region && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        Region
+                      </p>
+                      <p className="text-sm text-gray-700">{selectedWine.region}</p>
+                    </div>
+                  )}
+                  {selectedWine.country && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                        Country
+                      </p>
+                      <p className="text-sm text-gray-700">{selectedWine.country}</p>
+                    </div>
+                  )}
+                </div>
 
                 {/* Action Buttons */}
                 <div className="flex gap-3 pt-4 border-t border-gray-200">
