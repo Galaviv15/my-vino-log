@@ -47,8 +47,10 @@ export default function CellarGridPage() {
     type: '',
     vintage: '',
     quantity: '1',
-    location: 'CELLAR',
+    location: 'FRIDGE',
     rowId: '',
+    winery: '',
+    grapeVariety: [] as string[],
   });
   const [suggestions, setSuggestions] = useState<WineSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -66,6 +68,32 @@ export default function CellarGridPage() {
       { value: 'FORTIFIED', label: t('wines_types.fortified') },
     ],
     [t],
+  );
+
+  const grapeVarietyOptions = useMemo(
+    () => [
+      'Cabernet Sauvignon',
+      'Merlot',
+      'Pinot Noir',
+      'Syrah',
+      'Chardonnay',
+      'Sauvignon Blanc',
+      'Riesling',
+      'Pinot Grigio',
+      'Chenin Blanc',
+      'Viognier',
+      'Tempranillo',
+      'Sangiovese',
+      'Nebbiolo',
+      'Barbera',
+      'Cabernet Franc',
+      'Petit Verdot',
+      'Grenache',
+      'Cinsault',
+      'Mourvèdre',
+      'Garnacha',
+    ],
+    [],
   );
 
   const getLocationLabel = (location?: string) =>
@@ -89,6 +117,15 @@ export default function CellarGridPage() {
     if (name === 'name') {
       setShowSuggestions(true);
     }
+  };
+
+  const handleGrapeVarietyChange = (grape: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      grapeVariety: prev.grapeVariety.includes(grape)
+        ? prev.grapeVariety.filter((g) => g !== grape)
+        : [...prev.grapeVariety, grape],
+    }));
   };
 
   const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -194,7 +231,8 @@ export default function CellarGridPage() {
           quantity: normalizedQuantity,
           location: formData.location || 'CELLAR',
           rowId: formData.rowId ? Number(formData.rowId) : null,
-          winery: editingWine.winery || null,
+          winery: formData.winery || null,
+          grapeVariety: formData.grapeVariety.length > 0 ? formData.grapeVariety.join(', ') : null,
           region: editingWine.region || null,
           country: editingWine.country || null,
           imageUrl: editingWine.imageUrl || '/wine-placeholder.svg',
@@ -211,12 +249,14 @@ export default function CellarGridPage() {
           quantity: normalizedQuantity,
           location: formData.location || 'CELLAR',
           rowId: formData.rowId ? Number(formData.rowId) : null,
+          winery: formData.winery || null,
+          grapeVariety: formData.grapeVariety.length > 0 ? formData.grapeVariety.join(', ') : null,
           imageUrl: '/wine-placeholder.svg',
         });
         setWines((prev) => [response.data, ...prev]);
         setPage(1);
       }
-      setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'CELLAR', rowId: '' });
+      setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'FRIDGE', rowId: '', winery: '', grapeVariety: [] });
       setFormErrors({});
       setShowSuggestions(false);
     } catch (error) {
@@ -232,8 +272,10 @@ export default function CellarGridPage() {
       type: suggestion.type,
       vintage: suggestion.vintage,
       quantity: '1',
-      location: 'CELLAR',
+      location: 'FRIDGE',
       rowId: '',
+      winery: suggestion.winery || '',
+      grapeVariety: [],
     });
     setFormErrors((prev) => ({
       ...prev,
@@ -253,6 +295,8 @@ export default function CellarGridPage() {
       quantity: String(wine.quantity || 1),
       location: wine.location || 'CELLAR',
       rowId: wine.rowId ? String(wine.rowId) : '',
+      winery: wine.winery || '',
+      grapeVariety: wine.grapeVariety ? wine.grapeVariety.split(', ') : [],
     });
     setFormErrors({});
     setShowSuggestions(false);
@@ -261,7 +305,7 @@ export default function CellarGridPage() {
 
   const handleEditCancel = () => {
     setEditingWine(null);
-    setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'CELLAR', rowId: '' });
+    setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'FRIDGE', rowId: '', winery: '', grapeVariety: [] });
     setFormErrors({});
     setShowSuggestions(false);
     setShowAddForm(false);
@@ -439,7 +483,7 @@ export default function CellarGridPage() {
             <button
               onClick={() => {
                 setEditingWine(null);
-                setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'CELLAR', rowId: '' });
+                setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'FRIDGE', rowId: '', winery: '', grapeVariety: [] });
                 setFormErrors({});
                 setShowAddForm(true);
               }}
@@ -512,7 +556,7 @@ export default function CellarGridPage() {
               // FRIDGE VIEW
               <div className="grid gap-8">
                 {['FRIDGE', 'CELLAR'].map((location) => {
-                  const locationWines = wines.filter((w) => (w.location || 'CELLAR') === location);
+                  const locationWines = wines.filter((w) => (w.location || 'FRIDGE') === location);
                   if (locationWines.length === 0) return null;
 
                   const winesByRow = locationWines.reduce((acc, wine) => {
@@ -910,6 +954,60 @@ export default function CellarGridPage() {
                       <p className="mt-1 text-xs text-red-600">{formErrors.vintage}</p>
                     )}
                   </div>
+                </div>
+
+                {/* Winery */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t('wines.winery')} ({t('common.optional')})
+                  </label>
+                  <input
+                    type="text"
+                    name="winery"
+                    value={formData.winery}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+                    placeholder="e.g. Château Latour"
+                  />
+                </div>
+
+                {/* Grape Variety */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    {t('wines.grape_variety')} ({t('common.optional')})
+                  </label>
+                  <div className="grid grid-cols-2 gap-3 max-h-40 overflow-y-auto border border-gray-200 rounded-lg p-3 bg-gray-50">
+                    {grapeVarietyOptions.map((grape) => (
+                      <label key={grape} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formData.grapeVariety.includes(grape)}
+                          onChange={() => handleGrapeVarietyChange(grape)}
+                          className="w-4 h-4 text-wine-600 rounded focus:ring-2 focus:ring-wine-500"
+                        />
+                        <span className="text-sm text-gray-700">{grape}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {formData.grapeVariety.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {formData.grapeVariety.map((grape) => (
+                        <span
+                          key={grape}
+                          className="inline-flex items-center gap-1 px-3 py-1 bg-wine-100 text-wine-700 text-sm rounded-full"
+                        >
+                          {grape}
+                          <button
+                            type="button"
+                            onClick={() => handleGrapeVarietyChange(grape)}
+                            className="ml-1 hover:text-wine-900"
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* Quantity & Location */}

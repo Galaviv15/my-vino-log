@@ -10,7 +10,8 @@
     "edit": "Edit",
     "save": "Save",
     "add": "Add",
-    "close": "Close"
+    "close": "Close",
+    "optional": "Optional"
   },
   "auth": {
     "login": "Login",
