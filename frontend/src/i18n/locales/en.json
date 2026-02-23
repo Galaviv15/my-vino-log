@@ -112,9 +112,7 @@
     "position": "Position",
     "empty": "Empty",
     "click_to_add": "Click to add wine",
-    "drag_to_rearrange": "Drag to rearrange",
-    "unsorted": "Unsorted",
-    "no_wines": "No wines in this shelf"
+    "drag_to_rearrange": "Drag to rearrange"
   },
   "profile": {
     "title": "Profile",
