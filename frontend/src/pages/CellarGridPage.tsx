@@ -380,52 +380,55 @@ export default function CellarGridPage() {
           ) : (
             <div>
               {viewMode === 'list' ? (
-                // LIST VIEW
                 <div className="grid gap-3">
                   {pagedWines.map((wine) => (
-                <div key={wine.id} className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:shadow-lg cursor-pointer transition" onClick={() => setSelectedWine(wine)}>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={wine.imageUrl || '/wine-placeholder.svg'}
-                        alt="Wine"
-                        className="w-10 h-10 rounded-md object-cover border border-cream"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-wine-900">{wine.name}</div>
-                        <div className="text-sm text-gray-500">
-                            {wine.type || 'Type'} · {wine.vintage || 'Vintage'}
+                    <div
+                      key={wine.id}
+                      className="flex flex-wrap items-center justify-between gap-3 p-3 bg-white rounded-lg border border-gray-200 hover:shadow-lg cursor-pointer transition"
+                      onClick={() => setSelectedWine(wine)}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={wine.imageUrl || '/wine-placeholder.svg'}
+                            alt="Wine"
+                            className="w-10 h-10 rounded-md object-cover border border-cream"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium text-wine-900">{wine.name}</div>
+                            <div className="text-sm text-gray-500">
+                              {wine.type || 'Type'} · {wine.vintage || 'Vintage'}
+                            </div>
+                          </div>
                         </div>
                       </div>
+                      <div className="text-sm font-semibold text-wine-600">x{wine.quantity}</div>
                     </div>
-                  </div>
-                  <div className="text-sm font-semibold text-wine-600">x{wine.quantity}</div>
+                  ))}
+                  {totalPages > 1 && (
+                    <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
+                      {Array.from({ length: totalPages }, (_, index) => {
+                        const pageNumber = index + 1;
+                        const isActive = pageNumber === currentPage;
+                        return (
+                          <button
+                            key={pageNumber}
+                            type="button"
+                            onClick={() => setPage(pageNumber)}
+                            className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition ${
+                              isActive
+                                ? 'bg-wine-600 text-white border-wine-600'
+                                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNumber}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              ))}
-              {totalPages > 1 && (
-                <div className="mt-4 flex items-center justify-center gap-2 flex-wrap">
-                  {Array.from({ length: totalPages }, (_, index) => {
-                    const pageNumber = index + 1;
-                    const isActive = pageNumber === currentPage;
-                    return (
-                      <button
-                        key={pageNumber}
-                        type="button"
-                        onClick={() => setPage(pageNumber)}
-                        className={`px-3 py-1.5 rounded-md text-xs font-semibold border transition ${
-                          isActive
-                            ? 'bg-wine-600 text-white border-wine-600'
-                            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {pageNumber}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-            ) : (
+              ) : (
               // FRIDGE VIEW
               <div className="grid gap-8">
                 {['FRIDGE', 'CELLAR'].map((location) => {
@@ -470,9 +473,10 @@ export default function CellarGridPage() {
                       {/* Shelves container */}
                       <div className={`p-4 space-y-3 ${isFridge ? 'bg-slate-100' : 'bg-amber-100'}`}>
                         {shelfIds.map((shelfId) => {
+                          const shelfIdNumber = Number(shelfId);
                           const shelfKey = `${location}-${shelfId}`;
                           const isExpanded = expandedShelf === shelfKey;
-                          const shelfWines = winesByRow[shelfId];
+                          const shelfWines: LocalWine[] = winesByRow[shelfIdNumber] || [];
                           const shelfLabel = shelfId === '0' ? 'Unsorted' : `Row ${shelfId}`;
 
                           return (
