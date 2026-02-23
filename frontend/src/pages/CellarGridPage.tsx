@@ -56,7 +56,29 @@ export default function CellarGridPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'year' | 'row'>('name');
-  const [filters, setFilters] = useState({ type: '', year: '', grape: '', winery: '' });
+  const [filters, setFilters] = useState({ type: [] as string[], year: [] as string[], grape: [] as string[], winery: '' });
+  const [typeFilterOpen, setTypeFilterOpen] = useState(false);
+  const [yearFilterOpen, setYearFilterOpen] = useState(false);
+  const [grapeFilterOpen, setGrapeFilterOpen] = useState(false);
+
+  // Close filter dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.filter-dropdown')) {
+        setTypeFilterOpen(false);
+        setYearFilterOpen(false);
+        setGrapeFilterOpen(false);
+      }
+    };
+
+    if (typeFilterOpen || yearFilterOpen || grapeFilterOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [typeFilterOpen, yearFilterOpen, grapeFilterOpen]);
 
   const wineTypeOptions = useMemo(
     () => [
@@ -96,6 +118,17 @@ export default function CellarGridPage() {
     [],
   );
 
+  const yearOptions = useMemo(
+    () => {
+      const years = [];
+      for (let year = 2030; year >= 1990; year--) {
+        years.push(year.toString());
+      }
+      return years;
+    },
+    [],
+  );
+
   const getLocationLabel = (location?: string) =>
     location === 'FRIDGE' ? `🧊 ${t('wines.fridge')}` : `🍷 ${t('wines.cellar')}`;
 
@@ -125,6 +158,33 @@ export default function CellarGridPage() {
       grapeVariety: prev.grapeVariety.includes(grape)
         ? prev.grapeVariety.filter((g) => g !== grape)
         : [...prev.grapeVariety, grape],
+    }));
+  };
+
+  const handleGrapeFilterChange = (grape: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      grape: prev.grape.includes(grape)
+        ? prev.grape.filter((g) => g !== grape)
+        : [...prev.grape, grape],
+    }));
+  };
+
+  const handleTypeFilterChange = (type: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      type: prev.type.includes(type)
+        ? prev.type.filter((t) => t !== type)
+        : [...prev.type, type],
+    }));
+  };
+
+  const handleYearFilterChange = (year: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      year: prev.year.includes(year)
+        ? prev.year.filter((y) => y !== year)
+        : [...prev.year, year],
     }));
   };
 
@@ -355,14 +415,14 @@ export default function CellarGridPage() {
 
   const filteredWines = useMemo(() => {
     const typeFilter = filters.type;
-    const yearFilter = filters.year.trim();
-    const grapeFilter = filters.grape.trim().toLowerCase();
+    const yearFilter = filters.year;
+    const grapeFilter = filters.grape;
     const wineryFilter = filters.winery.trim().toLowerCase();
 
     return sortedWines.filter((wine) => {
-      if (typeFilter && wine.type !== typeFilter) return false;
-      if (yearFilter && (wine.vintage || '') !== yearFilter) return false;
-      if (grapeFilter && !(wine.grapeVariety || '').toLowerCase().includes(grapeFilter)) return false;
+      if (typeFilter.length > 0 && !typeFilter.includes(wine.type || '')) return false;
+      if (yearFilter.length > 0 && !yearFilter.includes(wine.vintage || '')) return false;
+      if (grapeFilter.length > 0 && !grapeFilter.some((g) => (wine.grapeVariety || '').includes(g))) return false;
       if (wineryFilter && !(wine.winery || '').toLowerCase().includes(wineryFilter)) return false;
       return true;
     });
@@ -437,35 +497,111 @@ export default function CellarGridPage() {
 
         {viewMode === 'list' && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-            <select
-              name="type"
-              value={filters.type}
-              onChange={handleFilterChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
-            >
-              <option value="">{t('wines.filter_all_types')}</option>
-              {wineTypeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <input
-              type="text"
-              name="year"
-              value={filters.year}
-              onChange={handleFilterChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
-              placeholder={t('wines.filter_year')}
-            />
-            <input
-              type="text"
-              name="grape"
-              value={filters.grape}
-              onChange={handleFilterChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
-              placeholder={t('wines.filter_grape')}
-            />
+            <div className="relative filter-dropdown">
+              <button
+                type="button"
+                onClick={() => setTypeFilterOpen(!typeFilterOpen)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer text-gray-700 text-left hover:bg-gray-50 transition flex items-center justify-between"
+              >
+                <span>
+                  {filters.type.length === 0 ? (
+                    <span className="text-gray-500">{t('wines.filter_all_types')}</span>
+                  ) : (
+                    <span className="text-sm font-medium">
+                      {filters.type.length} {filters.type.length === 1 ? 'type' : 'types'}
+                    </span>
+                  )}
+                </span>
+                <span className={`transition-transform ${typeFilterOpen ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
+              {typeFilterOpen && (
+                <div className="absolute z-10 w-full mt-1 rounded-lg border border-gray-200 bg-white shadow-lg p-3 space-y-2 max-h-48 overflow-y-auto">
+                  {wineTypeOptions.map((option) => (
+                    <label key={option.value} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={filters.type.includes(option.value)}
+                        onChange={() => handleTypeFilterChange(option.value)}
+                        className="w-4 h-4 text-wine-600 rounded focus:ring-2 focus:ring-wine-500"
+                      />
+                      <span className="text-sm text-gray-700">{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="relative filter-dropdown">
+              <button
+                type="button"
+                onClick={() => setYearFilterOpen(!yearFilterOpen)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer text-gray-700 text-left hover:bg-gray-50 transition flex items-center justify-between"
+              >
+                <span>
+                  {filters.year.length === 0 ? (
+                    <span className="text-gray-500">{t('wines.filter_year')}</span>
+                  ) : (
+                    <span className="text-sm font-medium">
+                      {filters.year.length} {filters.year.length === 1 ? 'year' : 'years'}
+                    </span>
+                  )}
+                </span>
+                <span className={`transition-transform ${yearFilterOpen ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
+              {yearFilterOpen && (
+                <div className="absolute z-10 w-full mt-1 rounded-lg border border-gray-200 bg-white shadow-lg p-3 space-y-2 max-h-48 overflow-y-auto">
+                  {yearOptions.map((year) => (
+                    <label key={year} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={filters.year.includes(year)}
+                        onChange={() => handleYearFilterChange(year)}
+                        className="w-4 h-4 text-wine-600 rounded focus:ring-2 focus:ring-wine-500"
+                      />
+                      <span className="text-sm text-gray-700">{year}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="relative filter-dropdown">
+              <button
+                type="button"
+                onClick={() => setGrapeFilterOpen(!grapeFilterOpen)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white cursor-pointer text-gray-700 text-left hover:bg-gray-50 transition flex items-center justify-between"
+              >
+                <span>
+                  {filters.grape.length === 0 ? (
+                    <span className="text-gray-500">{t('wines.filter_grape')}</span>
+                  ) : (
+                    <span className="text-sm font-medium">
+                      {filters.grape.length} {filters.grape.length === 1 ? 'grape' : 'grapes'}
+                    </span>
+                  )}
+                </span>
+                <span className={`transition-transform ${grapeFilterOpen ? 'rotate-180' : ''}`}>
+                  ▼
+                </span>
+              </button>
+              {grapeFilterOpen && (
+                <div className="absolute z-10 w-full mt-1 rounded-lg border border-gray-200 bg-white shadow-lg p-3 space-y-2 max-h-48 overflow-y-auto">
+                  {grapeVarietyOptions.map((grape) => (
+                    <label key={grape} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={filters.grape.includes(grape)}
+                        onChange={() => handleGrapeFilterChange(grape)}
+                        className="w-4 h-4 text-wine-600 rounded focus:ring-2 focus:ring-wine-500"
+                      />
+                      <span className="text-sm text-gray-700">{grape}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
             <input
               type="text"
               name="winery"
