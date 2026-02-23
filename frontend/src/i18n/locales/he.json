@@ -113,7 +113,9 @@
     "position": "מיקום",
     "empty": "ריק",
     "click_to_add": "לחץ להוספת יין",
-    "drag_to_rearrange": "גרור לסידור מחדש"
+    "drag_to_rearrange": "גרור לסידור מחדש",
+    "unsorted": "לא ממויין",
+    "row": "שורה"
   },
   "profile": {
     "title": "פרופיל",

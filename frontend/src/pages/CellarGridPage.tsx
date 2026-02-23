@@ -737,7 +737,7 @@ export default function CellarGridPage() {
                           const shelfKey = `${location}-${shelfId}`;
                           const isExpanded = expandedShelf === shelfKey;
                           const shelfWines: LocalWine[] = winesByRow[shelfIdNumber] || [];
-                          const shelfLabel = shelfId === '0' ? 'Unsorted' : `Row ${shelfId}`;
+                          const shelfLabel = shelfId === '0' ? t('cellar.unsorted') : `${t('cellar.row')} ${shelfId}`;
 
                           return (
                             <div

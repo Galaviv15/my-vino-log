@@ -113,7 +113,9 @@
     "position": "Position",
     "empty": "Empty",
     "click_to_add": "Click to add wine",
-    "drag_to_rearrange": "Drag to rearrange"
+    "drag_to_rearrange": "Drag to rearrange",
+    "unsorted": "Unsorted",
+    "row": "Row"
   },
   "profile": {
     "title": "Profile",
