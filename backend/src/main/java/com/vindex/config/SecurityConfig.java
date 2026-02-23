@@ -86,6 +86,8 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/auth/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/health").permitAll()
                     .requestMatchers(HttpMethod.GET, "/wines/search").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/wine-discovery/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/wine-discovery/**").permitAll()
                     .anyRequest().authenticated()
                     .and()
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

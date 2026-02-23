@@ -17,6 +17,14 @@ spring:
   flyway:
     locations: classpath:db/migration
     baseline-on-migrate: true
+  ai:
+    google:
+      gemini:
+        api-key: ${SPRING_AI_GOOGLE_GEMINI_API_KEY:}
+        chat:
+          options:
+            model: gemini-1.5-flash
+            temperature: 0.7
 
 server:
   port: 8080
@@ -37,3 +45,14 @@ snooth:
   api:
     base-url: ${SNOOTH_API_BASE_URL:https://api.snooth.com/wines/}
     key: ${SNOOTH_API_KEY:}
+
+serper:
+  api:
+    key: ${SERPER_API_KEY:}
+    base-url: https://google.serper.dev/search
+    timeout-ms: 10000
+
+wine-discovery:
+  cache-results: true
+  validate-before-save: true
+  max-search-results: 3

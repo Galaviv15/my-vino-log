@@ -31,6 +31,8 @@ services:
       SPRING_DATASOURCE_USERNAME: vindex_user
       SPRING_DATASOURCE_PASSWORD: vindex_password
       JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this-in-production-must-be-at-least-256-bits-long}
+      SPRING_AI_GOOGLE_GEMINI_API_KEY: ${SPRING_AI_GOOGLE_GEMINI_API_KEY:-}
+      SERPER_API_KEY: ${SERPER_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SNOOTH_API_KEY: ${SNOOTH_API_KEY:-}
       SNOOTH_API_BASE_URL: ${SNOOTH_API_BASE_URL:-https://api.snooth.com/wines/}
