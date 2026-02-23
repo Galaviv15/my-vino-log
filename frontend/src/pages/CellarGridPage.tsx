@@ -37,7 +37,7 @@ export default function CellarGridPage() {
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [page, setPage] = useState(1);
   const pageSize = 10;
-  const [viewMode, setViewMode] = useState<'list' | 'fridge'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'fridge'>('fridge');
   const [expandedShelf, setExpandedShelf] = useState<string | null>(null);
   const [selectedWine, setSelectedWine] = useState<LocalWine | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -65,6 +65,9 @@ export default function CellarGridPage() {
     ],
     [t],
   );
+
+  const getLocationLabel = (location?: string) =>
+    location === 'FRIDGE' ? `🧊 ${t('wines.fridge')}` : `🍷 ${t('wines.cellar')}`;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -300,16 +303,6 @@ export default function CellarGridPage() {
 
         <div className="flex gap-2 mb-6">
           <button
-            onClick={() => setViewMode('list')}
-            className={`px-4 py-2 rounded-lg font-semibold transition ${
-              viewMode === 'list'
-                ? 'bg-wine-600 text-white'
-                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            {t('wines.list_view')}
-          </button>
-          <button
             onClick={() => setViewMode('fridge')}
             className={`px-4 py-2 rounded-lg font-semibold transition ${
               viewMode === 'fridge'
@@ -318,6 +311,16 @@ export default function CellarGridPage() {
             }`}
           >
             {t('wines.fridge_view')}
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-4 py-2 rounded-lg font-semibold transition ${
+              viewMode === 'list'
+                ? 'bg-wine-600 text-white'
+                : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {t('wines.list_view')}
           </button>
         </div>
 
@@ -331,7 +334,7 @@ export default function CellarGridPage() {
                   : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
-              Sort by Name
+              {t('wines.sort_name')}
             </button>
             <button
               onClick={() => setSortBy('year')}
@@ -341,7 +344,7 @@ export default function CellarGridPage() {
                   : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
-              Sort by Year
+              {t('wines.sort_year')}
             </button>
             <button
               onClick={() => setSortBy('row')}
@@ -351,7 +354,7 @@ export default function CellarGridPage() {
                   : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
-              Sort by Row
+              {t('wines.sort_row')}
             </button>
           </div>
         )}
@@ -463,7 +466,7 @@ export default function CellarGridPage() {
                         } text-white flex items-center justify-between`}
                       >
                         <h3 className="text-2xl font-bold flex items-center gap-2">
-                          {isFridge ? '🧊 Fridge' : '🍷 Wine Cellar'}
+                          {isFridge ? `🧊 ${t('wines.fridge')}` : `🍷 ${t('wines.wine_cellar')}`}
                         </h3>
                         <div className="text-sm font-semibold opacity-75">
                           {locationWines.length} wine{locationWines.length !== 1 ? 's' : ''}
@@ -639,7 +642,7 @@ export default function CellarGridPage() {
                       Location & Row
                     </p>
                     <p className="text-sm font-semibold text-gray-900 mt-1">
-                      {selectedWine.location === 'FRIDGE' ? '🧊 Fridge' : '🍷 Cellar'}
+                      {getLocationLabel(selectedWine.location)}
                       {selectedWine.rowId ? ` • Row ${selectedWine.rowId}` : ' • No row assigned'}
                     </p>
                   </div>

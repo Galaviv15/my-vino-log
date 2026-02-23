@@ -82,7 +82,13 @@
     "wine_updated": "Wine updated successfully",
     "wine_deleted": "Wine deleted successfully",
     "list_view": "List View",
-    "fridge_view": "Fridge View"
+    "fridge_view": "Fridge View",
+    "fridge": "Fridge",
+    "cellar": "Cellar",
+    "wine_cellar": "Wine Cellar",
+    "sort_name": "Sort by Name",
+    "sort_year": "Sort by Year",
+    "sort_row": "Sort by Row"
   },
   "wines_types": {
     "red": "Red",

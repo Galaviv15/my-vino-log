@@ -82,7 +82,13 @@
     "wine_updated": "יין עודכן בהצלחה",
     "wine_deleted": "יין נמחק בהצלחה",
     "list_view": "תצוגת רשימה",
-    "fridge_view": "תצוגת מקרר"
+    "fridge_view": "תצוגת מקרר",
+    "fridge": "מקרר",
+    "cellar": "מרתף",
+    "wine_cellar": "מרתף יין",
+    "sort_name": "מיין לפי שם",
+    "sort_year": "מיין לפי שנה",
+    "sort_row": "מיין לפי שורה"
   },
   "wines_types": {
     "red": "אדום",
