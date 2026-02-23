@@ -61,6 +61,7 @@
   "wines": {
     "wine_name": "שם יין",
     "wine_type": "סוג",
+    "type": "סוג",
     "vintage": "מחזור",
     "winery": "יקבים",
     "region": "אזור",
@@ -69,6 +70,7 @@
     "alcohol": "אחוז אלכוהול",
     "quantity": "כמות",
     "location": "מיקום",
+    "location_and_row": "מיקום ושורה",
     "price": "מחיר",
     "optimal_drink_by": "שתייה אופטימלית עד",
     "notes": "הערות",
@@ -92,7 +94,9 @@
     "filter_all_types": "כל הסוגים",
     "filter_year": "סנן לפי שנה",
     "filter_grape": "סנן לפי זן ענבים",
-    "filter_winery": "סנן לפי יקב"
+    "filter_winery": "סנן לפי יקב",
+    "row": "שורה",
+    "no_row_assigned": "אין שורה מוקצה"
   },
   "wines_types": {
     "red": "אדום",

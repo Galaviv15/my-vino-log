@@ -12,6 +12,7 @@ interface LocalWine {
   winery?: string;
   region?: string;
   country?: string;
+  grapeVariety?: string;
   location?: string;
   rowId?: number;
 }
@@ -69,6 +70,14 @@ export default function CellarGridPage() {
 
   const getLocationLabel = (location?: string) =>
     location === 'FRIDGE' ? `🧊 ${t('wines.fridge')}` : `🍷 ${t('wines.cellar')}`;
+
+  const getWineTypeLabel = (type?: string | null) => {
+    if (!type) return '—';
+    const key = `wines_types.${type.toLowerCase()}`;
+    const translated = t(key);
+    // If translation key doesn't exist, t() returns the key, so return the original type
+    return translated.startsWith('wines_types.') ? type : translated;
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -465,10 +474,10 @@ export default function CellarGridPage() {
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-wine-900">{wine.name}</div>
                             <div className="text-sm text-gray-500">
-                              {wine.type || 'Type'} · {wine.vintage || 'Vintage'}
+                              {getWineTypeLabel(wine.type)} · {wine.vintage || t('wines.vintage')}
                             </div>
                             <div className="text-xs text-gray-400 mt-1">
-                              Winery: {wine.winery || '—'} · Grape: {wine.grapeVariety || '—'}
+                              {t('wines.winery')}: {wine.winery || '—'} · {t('wines.grape_variety')}: {wine.grapeVariety || '—'}
                             </div>
                           </div>
                         </div>
@@ -619,11 +628,11 @@ export default function CellarGridPage() {
                                               {wine.name}
                                             </div>
                                             <div className="text-xs text-gray-600 truncate">
-                                              {wine.type || 'Type'} ·{' '}
-                                              {wine.vintage || 'Vintage'}
+                                              {getWineTypeLabel(wine.type)} ·{' '}
+                                              {wine.vintage || t('wines.vintage')}
                                             </div>
                                             <div className="text-[11px] text-gray-500 truncate">
-                                              Winery: {wine.winery || '—'} · Grape: {wine.grapeVariety || '—'}
+                                              {t('wines.winery')}: {wine.winery || '—'} · {t('wines.grape_variety')}: {wine.grapeVariety || '—'}
                                             </div>
                                           </div>
                                         </div>
@@ -686,15 +695,15 @@ export default function CellarGridPage() {
                 <div className="grid grid-cols-2 gap-4 py-4 border-y border-gray-200">
                   <div>
                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Type
+                      {t('wines.type')}
                     </p>
                     <p className="text-sm font-semibold text-gray-900 mt-1">
-                      {selectedWine.type || '—'}
+                      {getWineTypeLabel(selectedWine.type)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Vintage
+                      {t('wines.vintage')}
                     </p>
                     <p className="text-sm font-semibold text-gray-900 mt-1">
                       {selectedWine.vintage || '—'}
@@ -702,7 +711,7 @@ export default function CellarGridPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Quantity
+                      {t('wines.quantity')}
                     </p>
                     <p className="text-sm font-semibold text-wine-600 mt-1">
                       ×{selectedWine.quantity}
@@ -710,11 +719,11 @@ export default function CellarGridPage() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Location & Row
+                      {t('wines.location_and_row')}
                     </p>
                     <p className="text-sm font-semibold text-gray-900 mt-1">
                       {getLocationLabel(selectedWine.location)}
-                      {selectedWine.rowId ? ` • Row ${selectedWine.rowId}` : ' • No row assigned'}
+                      {selectedWine.rowId ? ` • ${t('wines.row')} ${selectedWine.rowId}` : ` • ${t('wines.no_row_assigned')}`}
                     </p>
                   </div>
                 </div>
@@ -723,20 +732,20 @@ export default function CellarGridPage() {
                 <div className="space-y-2">
                   <div>
                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Winery
+                      {t('wines.winery')}
                     </p>
                     <p className="text-sm text-gray-700">{selectedWine.winery || '—'}</p>
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                      Grape Variety
+                      {t('wines.grape_variety')}
                     </p>
                     <p className="text-sm text-gray-700">{selectedWine.grapeVariety || '—'}</p>
                   </div>
                   {selectedWine.region && (
                     <div>
                       <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Region
+                        {t('wines.region')}
                       </p>
                       <p className="text-sm text-gray-700">{selectedWine.region}</p>
                     </div>
@@ -744,7 +753,7 @@ export default function CellarGridPage() {
                   {selectedWine.country && (
                     <div>
                       <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Country
+                        {t('wines.country')}
                       </p>
                       <p className="text-sm text-gray-700">{selectedWine.country}</p>
                     </div>

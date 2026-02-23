@@ -61,6 +61,7 @@
   "wines": {
     "wine_name": "Wine Name",
     "wine_type": "Type",
+    "type": "Type",
     "vintage": "Vintage",
     "winery": "Winery",
     "region": "Region",
@@ -69,6 +70,7 @@
     "alcohol": "Alcohol %",
     "quantity": "Quantity",
     "location": "Location",
+    "location_and_row": "Location & Row",
     "price": "Price",
     "optimal_drink_by": "Optimal Drink By",
     "notes": "Notes",
@@ -92,7 +94,9 @@
     "filter_all_types": "All Types",
     "filter_year": "Filter by year",
     "filter_grape": "Filter by grape",
-    "filter_winery": "Filter by winery"
+    "filter_winery": "Filter by winery",
+    "row": "Row",
+    "no_row_assigned": "No row assigned"
   },
   "wines_types": {
     "red": "Red",
