@@ -88,7 +88,11 @@
     "wine_cellar": "Wine Cellar",
     "sort_name": "Sort by Name",
     "sort_year": "Sort by Year",
-    "sort_row": "Sort by Row"
+    "sort_row": "Sort by Row",
+    "filter_all_types": "All Types",
+    "filter_year": "Filter by year",
+    "filter_grape": "Filter by grape",
+    "filter_winery": "Filter by winery"
   },
   "wines_types": {
     "red": "Red",

@@ -88,7 +88,11 @@
     "wine_cellar": "מרתף יין",
     "sort_name": "מיין לפי שם",
     "sort_year": "מיין לפי שנה",
-    "sort_row": "מיין לפי שורה"
+    "sort_row": "מיין לפי שורה",
+    "filter_all_types": "כל הסוגים",
+    "filter_year": "סנן לפי שנה",
+    "filter_grape": "סנן לפי זן ענבים",
+    "filter_winery": "סנן לפי יקב"
   },
   "wines_types": {
     "red": "אדום",

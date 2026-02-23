@@ -53,6 +53,7 @@ export default function CellarGridPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [sortBy, setSortBy] = useState<'name' | 'year' | 'row'>('name');
+  const [filters, setFilters] = useState({ type: '', year: '', grape: '', winery: '' });
 
   const wineTypeOptions = useMemo(
     () => [
@@ -79,6 +80,14 @@ export default function CellarGridPage() {
     if (name === 'name') {
       setShowSuggestions(true);
     }
+  };
+
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFilters((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   useEffect(() => {
@@ -269,9 +278,6 @@ export default function CellarGridPage() {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(wines.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  
   const sortedWines = useMemo(() => {
     const winesCopy = [...wines];
     switch (sortBy) {
@@ -293,8 +299,25 @@ export default function CellarGridPage() {
         return winesCopy;
     }
   }, [wines, sortBy]);
-  
-  const pagedWines = sortedWines.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const filteredWines = useMemo(() => {
+    const typeFilter = filters.type;
+    const yearFilter = filters.year.trim();
+    const grapeFilter = filters.grape.trim().toLowerCase();
+    const wineryFilter = filters.winery.trim().toLowerCase();
+
+    return sortedWines.filter((wine) => {
+      if (typeFilter && wine.type !== typeFilter) return false;
+      if (yearFilter && (wine.vintage || '') !== yearFilter) return false;
+      if (grapeFilter && !(wine.grapeVariety || '').toLowerCase().includes(grapeFilter)) return false;
+      if (wineryFilter && !(wine.winery || '').toLowerCase().includes(wineryFilter)) return false;
+      return true;
+    });
+  }, [sortedWines, filters]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredWines.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pagedWines = filteredWines.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <div className="min-h-screen bg-cream px-4 py-6 sm:px-6 lg:px-8">
@@ -325,7 +348,7 @@ export default function CellarGridPage() {
         </div>
 
         {viewMode === 'list' && (
-          <div className="flex gap-2 mb-6">
+          <div className="flex flex-wrap gap-2 mb-4">
             <button
               onClick={() => setSortBy('name')}
               className={`px-4 py-2 rounded-lg font-semibold text-sm transition ${
@@ -356,6 +379,48 @@ export default function CellarGridPage() {
             >
               {t('wines.sort_row')}
             </button>
+          </div>
+        )}
+
+        {viewMode === 'list' && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+            <select
+              name="type"
+              value={filters.type}
+              onChange={handleFilterChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+            >
+              <option value="">{t('wines.filter_all_types')}</option>
+              {wineTypeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              name="year"
+              value={filters.year}
+              onChange={handleFilterChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+              placeholder={t('wines.filter_year')}
+            />
+            <input
+              type="text"
+              name="grape"
+              value={filters.grape}
+              onChange={handleFilterChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+              placeholder={t('wines.filter_grape')}
+            />
+            <input
+              type="text"
+              name="winery"
+              value={filters.winery}
+              onChange={handleFilterChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-wine-500 focus:border-transparent"
+              placeholder={t('wines.filter_winery')}
+            />
           </div>
         )}
 
