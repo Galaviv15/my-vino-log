@@ -112,7 +112,9 @@
     "position": "מיקום",
     "empty": "ריק",
     "click_to_add": "לחץ להוספת יין",
-    "drag_to_rearrange": "גרור לסידור מחדש"
+    "drag_to_rearrange": "גרור לסידור מחדש",
+    "unsorted": "לא ממויין",
+    "no_wines": "אין יינות בשורה זו"
   },
   "profile": {
     "title": "פרופיל",
