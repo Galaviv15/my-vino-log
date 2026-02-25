@@ -25,8 +25,11 @@ public class GlobalWine {
     @Column(name = "wine_name", nullable = false)
     private String wineName;
 
-    @Column(name = "vintage")
+    @Column(name = "vintage", nullable = false)
     private String vintage; // Can be a year or "NV" for Non-Vintage
+
+    @Column(name = "type", nullable = false)
+    private String type; // Red, White, Rosé, Sparkling, Dessert, Fortified
 
     @Column(name = "grapes", columnDefinition = "JSON")
     @JdbcTypeCode(SqlTypes.JSON)

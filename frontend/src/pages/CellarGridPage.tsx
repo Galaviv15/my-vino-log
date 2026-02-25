@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/api';
 import SmartWineSearch from '../components/SmartWineSearch';
+import AddWineModal from '../components/AddWineModal';
 import { DiscoveredWine } from '../services/wineDiscovery';
 
 interface LocalWine {
@@ -35,6 +36,7 @@ export default function CellarGridPage() {
   const [loadingWines, setLoadingWines] = useState(true);
   const [wineError, setWineError] = useState('');
   const [savingWine, setSavingWine] = useState(false);
+  const [isAddWineModalOpen, setIsAddWineModalOpen] = useState(false);
   const [deletingWineId, setDeletingWineId] = useState<number | null>(null);
   const [editingWine, setEditingWine] = useState<LocalWine | null>(null);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
@@ -392,6 +394,48 @@ export default function CellarGridPage() {
     setShowAddForm(false);
   };
 
+  const handleWineAddedFromModal = async (discoveredWine: DiscoveredWine, details: any) => {
+    setSavingWine(true);
+    setWineError('');
+    try {
+      // If wine should be saved to global database and source is manual, save it first
+      if (details.saveToDatabase && discoveredWine.source === 'manual') {
+        await apiClient.post('/wine-discovery/save-global', {
+          wineName: discoveredWine.wineName,
+          winery: discoveredWine.winery,
+          vintage: discoveredWine.vintage,
+          grapes: discoveredWine.grapes,
+          region: discoveredWine.region,
+          country: discoveredWine.country,
+          alcoholContent: discoveredWine.alcoholContent,
+        });
+      }
+
+      // Add wine to user's cellar
+      const response = await apiClient.post<LocalWine>('/wines', {
+        name: discoveredWine.wineName,
+        type: discoveredWine.type || null,
+        vintage: discoveredWine.vintage || null,
+        quantity: Math.max(1, details.quantity || 1),
+        location: details.location || 'FRIDGE',
+        rowId: details.row || null,
+        winery: discoveredWine.winery || null,
+        grapeVariety: discoveredWine.grapes && discoveredWine.grapes.length > 0 ? discoveredWine.grapes.join(', ') : null,
+        imageUrl: '/wine-placeholder.svg',
+      });
+
+      // Add to wines list
+      setWines((prev) => [response.data, ...prev]);
+      setIsAddWineModalOpen(false);
+      setPage(1);
+    } catch (error) {
+      setWineError(t('common.error'));
+      console.error('Error adding wine:', error);
+    } finally {
+      setSavingWine(false);
+    }
+  };
+
   const handleDelete = async (wineId: number) => {
     const shouldDelete = window.confirm('Are you sure you want to delete this wine?');
     if (!shouldDelete) {
@@ -639,10 +683,7 @@ export default function CellarGridPage() {
             <h2 className="text-xl font-semibold text-wine-900">{t('dashboard.my_collection')}</h2>
             <button
               onClick={() => {
-                setEditingWine(null);
-                setFormData({ name: '', type: '', vintage: '', quantity: '1', location: 'FRIDGE', rowId: '', winery: '', grapeVariety: [] });
-                setFormErrors({});
-                setShowAddForm(true);
+                setIsAddWineModalOpen(true);
               }}
               className="px-4 py-2 rounded-lg bg-wine-600 text-white font-semibold hover:bg-wine-700 transition"
             >
@@ -1244,6 +1285,14 @@ export default function CellarGridPage() {
           </div>
         )}
       </div>
+
+      {/* Add Wine Modal - New 3-step flow */}
+      <AddWineModal
+        isOpen={isAddWineModalOpen}
+        onClose={() => setIsAddWineModalOpen(false)}
+        onWineAdded={handleWineAddedFromModal}
+        isLoading={savingWine}
+      />
     </div>
   );
 }

@@ -13,7 +13,7 @@ The web application is now live and accessible in your browser!
 
 ✅ **Frontend Server**: Running on port 5173 (Vite dev server)
 ⏳ **Backend API**: Not yet running (Phase 2 will implement)
-⏳ **Database**: Not running (requires Docker or local MySQL setup)
+✅ **Database**: Local MySQL (ensure running on port 3306)
 
 ---
 
@@ -72,10 +72,10 @@ Try editing: `frontend/src/components/Header.tsx` or `frontend/src/pages/LoginPa
 
 To add backend functionality:
 
-1. **Start MySQL Database** (via Docker or local install)
+1. **Start MySQL Database** (local installation)
    ```bash
-   docker run -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root \
-     -e MYSQL_DATABASE=vindex_db mysql:8.0
+   brew services start mysql
+   # Verify in MySQL Workbench - vino-log database should exist
    ```
 
 2. **Start Spring Boot Backend** (requires Java 21 + Maven)

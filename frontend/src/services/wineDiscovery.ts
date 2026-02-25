@@ -11,6 +11,7 @@ export interface DiscoveredWine {
   winery: string;
   wineName: string;
   vintage: string;
+  type?: string;
   grapes?: string[];
   region?: string;
   country?: string;

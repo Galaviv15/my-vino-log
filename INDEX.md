@@ -199,12 +199,7 @@ my-vino-log/
 │   ├── src/main/resources/
 │   │   ├── application.yml
 │   │   └── db/migration/           (Flyway schema)
-│   ├── pom.xml
-│   └── Dockerfile
-│
-├── 🐳 Docker
-│   ├── docker-compose.yml
-│   └── backend/Dockerfile
+│   └── pom.xml
 │
 ├── 📋 Configuration
 │   ├── .env.example

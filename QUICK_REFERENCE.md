@@ -2,14 +2,7 @@
 
 ## 🚀 Getting Started (5 Minutes)
 
-### Using Docker (Easiest)
-```bash
-cd /Users/galaviv15/Desktop/my-vino-log
-docker-compose up -d
-# Open http://localhost:5173 in your browser
-```
-
-### Local Development
+### Local Development Setup
 ```bash
 # Terminal 1: Backend
 cd backend
@@ -19,6 +12,8 @@ mvn spring-boot:run
 cd frontend
 npm install
 npm run dev
+
+# Open http://localhost:5173 in your browser
 ```
 
 ---
@@ -252,10 +247,10 @@ lsof -ti:3306 | xargs kill -9    # MySQL
 ```
 
 ### MySQL Connection Error
+Ensure local MySQL is running:
 ```bash
-docker-compose down
-docker volume rm my-vino-log_mysql_data  # Optional: clear DB
-docker-compose up -d
+brew services start mysql
+mysql -u root -p12345678 -e "USE vino-log; SHOW TABLES;"
 ```
 
 ### Frontend Not Connecting to Backend
@@ -289,7 +284,7 @@ JWT_SECRET=your-secure-key-256-bits-minimum
 OPENAI_API_KEY=sk-...
 ```
 
-Or use defaults in `docker-compose.yml`
+See `application.yml` for all Spring configuration defaults.
 
 ---
 

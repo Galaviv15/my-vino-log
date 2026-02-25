@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { discoverWine, DiscoveredWine } from '../services/wineDiscovery';
+import { discoverWine, DiscoveredWine, searchWinesByName } from '../services/wineDiscovery';
 import '../styles/SmartWineSearch.css';
 
 interface SmartWineSearchProps {
@@ -17,6 +17,39 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [suggestions, setSuggestions] = useState<DiscoveredWine[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Autocomplete: Search database as user types wine name
+  useEffect(() => {
+    const searchSuggestions = async () => {
+      if (wineName.trim().length < 2) {
+        setSuggestions([]);
+        setShowSuggestions(false);
+        return;
+      }
+
+      try {
+        const results = await searchWinesByName(wineName.trim());
+        setSuggestions(results || []);
+        setShowSuggestions(true);
+      } catch (err) {
+        console.error('Error searching suggestions:', err);
+        setSuggestions([]);
+      }
+    };
+
+    const timer = setTimeout(searchSuggestions, 300); // Debounce
+    return () => clearTimeout(timer);
+  }, [wineName]);
+
+  const handleSelectSuggestion = (wine: DiscoveredWine) => {
+    setWineName(wine.wineName);
+    setWinery(wine.winery);
+    setVintage(wine.vintage || '');
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
 
   const handleSearch = async () => {
     setError('');
@@ -104,9 +137,28 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
                 type="text"
                 value={wineName}
                 onChange={(e) => setWineName(e.target.value)}
+                onFocus={() => wineName.trim().length >= 2 && setShowSuggestions(true)}
                 placeholder={t('wine_discovery.wine_name_placeholder') || 'e.g., La Tâche'}
                 disabled={searching}
+                autoComplete="off"
               />
+              {showSuggestions && suggestions.length > 0 && (
+                <div className="suggestions-dropdown">
+                  {suggestions.map((wine) => (
+                    <div
+                      key={wine.id}
+                      className="suggestion-item"
+                      onClick={() => handleSelectSuggestion(wine)}
+                    >
+                      <div className="suggestion-name">
+                        {wine.wineName}
+                        {wine.vintage && <span className="suggestion-vintage"> ({wine.vintage})</span>}
+                      </div>
+                      <div className="suggestion-winery">{wine.winery}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="form-group">

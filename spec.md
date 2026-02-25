@@ -9,7 +9,7 @@ Backend: Java 21, Spring Boot 3.x, Spring Data JPA.
 Security: Spring Security, JWT with Refresh Token (30-day expiry), and HttpOnly Cookies.
 
 
-Database: MySQL 8.0 (Dockerized).
+Database: MySQL 8.0 (Local Installation).
 
 
 Frontend: React (TypeScript), Tailwind CSS.
@@ -44,7 +44,7 @@ Profile Area: Edit fridge dimensions and wine preferences.
 
 4. Infrastructure
 
-Docker Compose: Orchestrating Spring Boot and MySQL containers.
+Local Development: Spring Boot backend and local MySQL running on development machine.
 
 
 PWA Manifest: Ensuring the app can be installed on iOS/Android home screens.

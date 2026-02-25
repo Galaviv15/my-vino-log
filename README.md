@@ -29,8 +29,7 @@ my-vino-log/
 │   │   ├── application.yml
 │   │   └── db/migration/
 │   │       └── V1__Initial_schema.sql
-│   ├── pom.xml
-│   └── Dockerfile
+│   └── pom.xml
 ├── frontend/                   # React 18 TypeScript Frontend
 │   ├── src/
 │   │   ├── App.tsx
@@ -63,7 +62,6 @@ my-vino-log/
 │   ├── tailwind.config.js
 │   ├── postcss.config.js
 │   └── package.json
-├── docker-compose.yml         # Docker orchestration
 ├── spec.md                    # Project specification
 └── README.md                  # This file
 ```

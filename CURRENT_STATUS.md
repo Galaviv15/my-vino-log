@@ -63,16 +63,16 @@
 ### Option 1: Complete Backend Implementation (Phase 2)
 
 ```bash
-# Start MySQL (using Docker)
-docker run -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=root \
-  -e MYSQL_DATABASE=vindex_db -e MYSQL_USER=vindex_user \
-  -e MYSQL_PASSWORD=vindex_password mysql:8.0
+# Start MySQL locally (should already be running if installed)
+# Verify connection in MySQL Workbench to vino-log database
 
-# In terminal 2: Start Backend
+# In terminal 1: Start Backend
 cd backend
 mvn spring-boot:run
 
-# Frontend already running at http://localhost:5173
+# In terminal 2: Frontend already running at http://localhost:5173
+cd frontend
+npm run dev
 ```
 
 **What you'll get:**

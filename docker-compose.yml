@@ -1,25 +1,25 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: vindex-mysql
-    environment:
-      MYSQL_ROOT_PASSWORD: root_password
-      MYSQL_DATABASE: vindex_db
-      MYSQL_USER: vindex_user
-      MYSQL_PASSWORD: vindex_password
-    ports:
-      - "3307:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-    networks:
-      - vindex-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # mysql:
+  #   image: mysql:8.0
+  #   container_name: vindex-mysql
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: root_password
+  #     MYSQL_DATABASE: vindex_db
+  #     MYSQL_USER: vindex_user
+  #     MYSQL_PASSWORD: vindex_password
+  #   ports:
+  #     - "3307:3306"
+  #   volumes:
+  #     - mysql_data:/var/lib/mysql
+  #   networks:
+  #     - vindex-network
+  #   healthcheck:
+  #     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
 
   backend:
     build:
@@ -27,9 +27,9 @@ services:
       dockerfile: Dockerfile
     container_name: vindex-backend
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/vindex_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: vindex_user
-      SPRING_DATASOURCE_PASSWORD: vindex_password
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/vino-log?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: 12345678
       JWT_SECRET: ${JWT_SECRET:-a-very-secure-jwt-secret-key-that-is-long-enough-for-hs512-algorithm-production1234}
       SPRING_AI_GOOGLE_AI_GEMINI_API_KEY: ${SPRING_AI_GOOGLE_AI_GEMINI_API_KEY:-}
       SERPER_API_KEY: ${SERPER_API_KEY:-}
@@ -38,14 +38,14 @@ services:
       SNOOTH_API_BASE_URL: ${SNOOTH_API_BASE_URL:-https://api.snooth.com/wines/}
     ports:
       - "8080:8080"
-    depends_on:
-      mysql:
-        condition: service_healthy
+    # depends_on:
+    #   mysql:
+    #     condition: service_healthy
     networks:
       - vindex-network
 
-volumes:
-  mysql_data:
+# volumes:
+#   mysql_data:
 
 networks:
   vindex-network:
