@@ -33,7 +33,7 @@ const generateYearOptions = () => {
 };
 
 interface ManualWineFormProps {
-  onSubmit: (wine: DiscoveredWine, saveToDb: boolean) => void;
+  onSubmit: (wine: DiscoveredWine, saveToDb: boolean, imageFile?: File) => void;
   onCancel: () => void;
   t: (key: string, defaultValue?: string) => string;
   location?: string;
@@ -53,6 +53,8 @@ export default function ManualWineForm({ onSubmit, onCancel, t, location = 'FRID
   const [alcoholContent, setAlcoholContent] = useState('');
   const [saveToDb, setSaveToDb] = useState(false);
   const [error, setError] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleSubmit = () => {
     if (!wineName.trim() || !winery.trim()) {
@@ -76,8 +78,27 @@ export default function ManualWineForm({ onSubmit, onCancel, t, location = 'FRID
       source: 'manual',
     };
 
-    onSubmit(wine, saveToDb);
+    onSubmit(wine, saveToDb, imageFile || undefined);
     resetForm();
+  };
+
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImagePreview(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const handleGrapeVarietyChange = (grape: string) => {
@@ -97,6 +118,8 @@ export default function ManualWineForm({ onSubmit, onCancel, t, location = 'FRID
     setAlcoholContent('');
     setSaveToDb(false);
     setError('');
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   return (
@@ -247,6 +270,77 @@ export default function ManualWineForm({ onSubmit, onCancel, t, location = 'FRID
           placeholder={t('wine_discovery.alcohol_placeholder') || 'e.g., 13.5'}
           className="input-field"
         />
+      </div>
+
+      <div className="form-group">
+        <label>{t('wine_discovery.image') || 'Wine Image'}</label>
+        
+        {/* Image Preview */}
+        <div
+          className="image-preview"
+          style={{
+            marginBottom: '1rem',
+            padding: '1rem',
+            border: '2px dashed #ccc',
+            borderRadius: '8px',
+            textAlign: 'center',
+            minHeight: '150px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: '#f9f9f9',
+          }}
+        >
+          {imagePreview ? (
+            <div style={{ position: 'relative', width: '100%' }}>
+              <img
+                src={imagePreview}
+                alt="Wine preview"
+                style={{ maxHeight: '150px', maxWidth: '100%' }}
+              />
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                style={{
+                  marginTop: '0.5rem',
+                  padding: '0.25rem 0.75rem',
+                  backgroundColor: '#f44336',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                ✕ {t('common.remove') || 'Remove'}
+              </button>
+            </div>
+          ) : (
+            <span style={{ color: '#999' }}>
+              {t('wine_discovery.no_image_selected') || 'No image selected'}
+            </span>
+          )}
+        </div>
+
+        {/* File Input */}
+        <input
+          id="wine-image-input"
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          onChange={handleImageFileChange}
+          style={{ display: 'none' }}
+        />
+        <button
+          type="button"
+          onClick={() => document.getElementById('wine-image-input')?.click()}
+          className="btn btn-secondary"
+          style={{ width: '100%', marginBottom: '0.5rem' }}
+        >
+          🖼️ {t('wine_discovery.choose_image') || 'Choose Image'}
+        </button>
+        <small style={{ color: '#666', display: 'block', marginBottom: '0.5rem' }}>
+          {t('wine_discovery.image_hint') || 'JPG, PNG, GIF or WebP (max 5MB)'}
+        </small>
       </div>
 
       <div className="save-to-db-option">

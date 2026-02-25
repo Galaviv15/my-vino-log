@@ -12,7 +12,8 @@
     "add": "הוסף",
     "close": "סגור",
     "optional": "אופציונלי",
-    "back": "חזור"
+    "back": "חזור",
+    "remove": "הסר"
   },
   "auth": {
     "login": "התחברות",
@@ -171,7 +172,11 @@
     "manual_entry_description": "מלא את פרטי היין להלן",
     "from_database": "📚 ממסד הנתונים",
     "from_serper": "🔍 מ-Serper",
-    "from_manual": "✏️ הזנה ידנית"
+    "from_manual": "✏️ הזנה ידנית",
+    "image": "תמונת יין",
+    "choose_image": "בחר תמונה",
+    "no_image_selected": "לא בחרת תמונה",
+    "image_hint": "JPG, PNG, GIF או WebP (עד 5MB)"
   },
   "validation": {
     "required": "שדה זה נדרש",

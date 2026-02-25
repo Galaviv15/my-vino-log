@@ -16,6 +16,7 @@ export interface DiscoveredWine {
   region?: string;
   country?: string;
   alcoholContent?: number;
+  imageUrl?: string;
   source?: string;
   aiValidated?: boolean;
 }

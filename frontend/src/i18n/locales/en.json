@@ -14,7 +14,8 @@
     "add": "Add",
     "close": "Close",
     "optional": "Optional",
-    "back": "Back"
+    "back": "Back",
+    "remove": "Remove"
   },
   "auth": {
     "login": "Login",
@@ -173,7 +174,11 @@
     "manual_entry_description": "Fill in the wine details below",
     "from_database": "📚 From Database",
     "from_serper": "🔍 From Serper",
-    "from_manual": "✏️ Manual Entry"
+    "from_manual": "✏️ Manual Entry",
+    "image": "Wine Image",
+    "choose_image": "Choose Image",
+    "no_image_selected": "No image selected",
+    "image_hint": "JPG, PNG, GIF or WebP (max 5MB)"
   },
   "validation": {
     "required": "This field is required",

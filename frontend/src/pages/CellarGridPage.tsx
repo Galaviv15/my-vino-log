@@ -4,6 +4,7 @@ import apiClient from '../services/api';
 import SmartWineSearch from '../components/SmartWineSearch';
 import AddWineModal from '../components/AddWineModal';
 import { DiscoveredWine } from '../services/wineDiscovery';
+import { getImageUrl, uploadWineImage, validateImageFile, deleteWineImage } from '../services/imageUpload';
 
 interface LocalWine {
   id: number;
@@ -40,6 +41,8 @@ export default function CellarGridPage() {
   const [deletingWineId, setDeletingWineId] = useState<number | null>(null);
   const [editingWine, setEditingWine] = useState<LocalWine | null>(null);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [uploadingImageId, setUploadingImageId] = useState<number | null>(null);
+  const [imageError, setImageError] = useState('');
   const [page, setPage] = useState(1);
   const pageSize = 10;
   const [viewMode, setViewMode] = useState<'list' | 'fridge'>('fridge');
@@ -394,7 +397,69 @@ export default function CellarGridPage() {
     setShowAddForm(false);
   };
 
-  const handleWineAddedFromModal = async (discoveredWine: DiscoveredWine, details: any) => {
+  const handleImageUpload = async (wineId: number, file: File) => {
+    const validation = validateImageFile(file);
+    if (validation) {
+      setImageError(validation);
+      return;
+    }
+
+    setUploadingImageId(wineId);
+    setImageError('');
+
+    try {
+      const result = await uploadWineImage(wineId, file);
+      if (result) {
+        // Update the wine in the list with new image URL
+        setWines((prev) =>
+          prev.map((wine) =>
+            wine.id === wineId ? { ...wine, imageUrl: result.imageUrl } : wine
+          )
+        );
+        // Update selected wine if it's the one being edited
+        if (selectedWine && selectedWine.id === wineId) {
+          setSelectedWine({ ...selectedWine, imageUrl: result.imageUrl });
+        }
+      } else {
+        setImageError('Failed to upload image');
+      }
+    } catch (error) {
+      setImageError('Error uploading image');
+      console.error('Image upload error:', error);
+    } finally {
+      setUploadingImageId(null);
+    }
+  };
+
+  const handleImageDelete = async (wineId: number) => {
+    setUploadingImageId(wineId);
+    setImageError('');
+
+    try {
+      const success = await deleteWineImage(wineId);
+      if (success) {
+        // Update the wine in the list to remove image URL
+        setWines((prev) =>
+          prev.map((wine) =>
+            wine.id === wineId ? { ...wine, imageUrl: undefined } : wine
+          )
+        );
+        // Update selected wine if it's the one being edited
+        if (selectedWine && selectedWine.id === wineId) {
+          setSelectedWine({ ...selectedWine, imageUrl: undefined });
+        }
+      } else {
+        setImageError('Failed to delete image');
+      }
+    } catch (error) {
+      setImageError('Error deleting image');
+      console.error('Image delete error:', error);
+    } finally {
+      setUploadingImageId(null);
+    }
+  };
+
+  const handleWineAddedFromModal = async (discoveredWine: DiscoveredWine, details: any, imageFile?: File) => {
     setSavingWine(true);
     setWineError('');
     try {
@@ -415,7 +480,7 @@ export default function CellarGridPage() {
       const response = await apiClient.post<LocalWine>('/wines', {
         name: discoveredWine.wineName,
         type: discoveredWine.type || null,
-        vintage: discoveredWine.vintage || null,
+        vintage: details.vintage || discoveredWine.vintage || null,
         quantity: Math.max(1, details.quantity || 1),
         location: details.location || 'FRIDGE',
         rowId: details.row || null,
@@ -424,8 +489,27 @@ export default function CellarGridPage() {
         imageUrl: '/wine-placeholder.svg',
       });
 
-      // Add to wines list
-      setWines((prev) => [response.data, ...prev]);
+      // Upload image if provided
+      if (imageFile && response.data.id) {
+        try {
+          await uploadWineImage(response.data.id, imageFile);
+          // Update the wine in the list with the new image
+          setWines((prev) =>
+            prev.map((wine) =>
+              wine.id === response.data.id
+                ? { ...wine, imageUrl: `/api/wine-images/${response.data.id}` }
+                : wine
+            )
+          );
+        } catch (imgError) {
+          console.warn('Failed to upload image, but wine was created successfully:', imgError);
+          // Image upload failure is not critical - wine was created
+        }
+      } else {
+        // Add to wines list if no image upload
+        setWines((prev) => [response.data, ...prev]);
+      }
+
       setIsAddWineModalOpen(false);
       setPage(1);
     } catch (error) {
@@ -859,11 +943,14 @@ export default function CellarGridPage() {
                                         <div className="flex items-center gap-3 flex-1 min-w-0">
                                           <img
                                             src={
-                                              wine.imageUrl ||
+                                              getImageUrl(wine.imageUrl) ||
                                               '/wine-placeholder.svg'
                                             }
                                             alt="Wine"
                                             className="w-10 h-10 rounded object-cover border-2 border-gray-300"
+                                            onError={(e) => {
+                                              (e.target as HTMLImageElement).src = '/wine-placeholder.svg';
+                                            }}
                                           />
                                           <div className="min-w-0">
                                             <div className="font-semibold text-gray-900 truncate">
@@ -912,7 +999,7 @@ export default function CellarGridPage() {
               {/* Image */}
               <div className="relative h-48 bg-gray-100 overflow-hidden">
                 <img
-                  src={selectedWine.imageUrl || '/wine-placeholder.svg'}
+                  src={getImageUrl(selectedWine.imageUrl) || '/wine-placeholder.svg'}
                   alt={selectedWine.name}
                   className="w-full h-full object-cover"
                 />
@@ -922,10 +1009,37 @@ export default function CellarGridPage() {
                 >
                   ✕
                 </button>
+                
+                {/* Edit Image Button */}
+                <label
+                  className="absolute bottom-2 right-2 bg-wine-600 hover:bg-wine-700 text-white rounded-full p-2 cursor-pointer transition shadow-lg flex items-center justify-center"
+                  title="Edit wine image"
+                >
+                  ✏️
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleImageUpload(selectedWine.id, file);
+                      }
+                    }}
+                    disabled={uploadingImageId === selectedWine.id}
+                    className="hidden"
+                  />
+                </label>
               </div>
 
               {/* Content */}
               <div className="p-6 space-y-4">
+                {/* Image Error Message */}
+                {imageError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    {imageError}
+                  </div>
+                )}
+                
                 {/* Title */}
                 <div>
                   <h2 className="text-2xl font-bold text-wine-900">
@@ -1003,26 +1117,39 @@ export default function CellarGridPage() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3 pt-4 border-t border-gray-200">
-                  <button
-                    onClick={() => {
-                      handleEditStart(selectedWine);
-                      setSelectedWine(null);
-                    }}
-                    className="flex-1 px-4 py-2 bg-wine-600 text-white font-semibold rounded-lg hover:bg-wine-700 transition"
-                  >
-                    {t('wines.edit_wine')}
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleDelete(selectedWine.id);
-                      setSelectedWine(null);
-                    }}
-                    disabled={deletingWineId === selectedWine.id}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {t('wines.delete_wine')}
-                  </button>
+                <div className="flex flex-col gap-3 pt-4 border-t border-gray-200">
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        handleEditStart(selectedWine);
+                        setSelectedWine(null);
+                      }}
+                      className="flex-1 px-4 py-2 bg-wine-600 text-white font-semibold rounded-lg hover:bg-wine-700 transition"
+                    >
+                      {t('wines.edit_wine')}
+                    </button>
+                    <button
+                      onClick={() => {
+                        handleDelete(selectedWine.id);
+                        setSelectedWine(null);
+                      }}
+                      disabled={deletingWineId === selectedWine.id}
+                      className="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {t('wines.delete_wine')}
+                    </button>
+                  </div>
+                  
+                  {/* Delete Image Button */}
+                  {selectedWine.imageUrl && (
+                    <button
+                      onClick={() => handleImageDelete(selectedWine.id)}
+                      disabled={uploadingImageId === selectedWine.id}
+                      className="w-full px-4 py-2 bg-gray-400 text-white font-semibold rounded-lg hover:bg-gray-500 transition disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      {uploadingImageId === selectedWine.id ? '...' : '🗑️ Delete Image'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1092,9 +1219,12 @@ export default function CellarGridPage() {
                                 className="w-full px-4 py-3 text-left hover:bg-cream/60 transition flex items-center gap-3"
                               >
                                 <img
-                                  src={suggestion.imageUrl || '/wine-placeholder.svg'}
+                                  src={getImageUrl(suggestion.imageUrl) || '/wine-placeholder.svg'}
                                   alt="Wine"
                                   className="w-10 h-10 rounded-md object-cover border border-cream"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = '/wine-placeholder.svg';
+                                  }}
                                 />
                                 <div>
                                   <div className="font-medium text-wine-900">{suggestion.name}</div>

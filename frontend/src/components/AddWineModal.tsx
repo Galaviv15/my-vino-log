@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { discoverWine, DiscoveredWine, searchWinesByName } from '../services/wineDiscovery';
+import { getImageUrl } from '../services/imageUpload';
 import ManualWineForm from './ManualWineForm';
 import '../styles/AddWineModal.css';
 
 interface AddWineModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onWineAdded: (wine: DiscoveredWine, details: WineAddDetails) => void;
+  onWineAdded: (wine: DiscoveredWine, details: WineAddDetails, imageFile?: File) => void;
   isLoading?: boolean;
 }
 
@@ -16,6 +17,7 @@ export interface WineAddDetails {
   location?: string;
   shelf?: number;
   row?: number;
+  vintage?: string;
   saveToDatabase?: boolean;
 }
 
@@ -158,6 +160,7 @@ export default function AddWineModal({
         location: location || undefined,
         shelf: shelf > 0 ? shelf : undefined,
         row: row > 0 ? row : undefined,
+        vintage: vintage || undefined,
         saveToDatabase: wineSource === 'serper' ? saveToDb : undefined,
       };
       onWineAdded(selectedWine, details);
@@ -170,7 +173,7 @@ export default function AddWineModal({
     setError('');
   };
 
-  const handleManualWineSubmit = (wine: DiscoveredWine, shouldSaveToDb: boolean) => {
+  const handleManualWineSubmit = (wine: DiscoveredWine, shouldSaveToDb: boolean, imageFile?: File) => {
     const details: WineAddDetails = {
       quantity: Math.max(1, quantity),
       location: location || undefined,
@@ -178,7 +181,7 @@ export default function AddWineModal({
       row: row > 0 ? row : undefined,
       saveToDatabase: shouldSaveToDb,
     };
-    onWineAdded(wine, details);
+    onWineAdded(wine, details, imageFile);
     resetForm();
   };
 
@@ -267,7 +270,7 @@ export default function AddWineModal({
                 setCurrentStep('search');
                 setError('');
               }}
-              t={t}
+              t={t as (key: string, defaultValue?: string) => string}
               location={location}
               setLocation={setLocation}
               row={row}
@@ -391,6 +394,20 @@ function PreviewStep({
 
   return (
     <div className="preview-step">
+      {/* Wine Image */}
+      {wine.imageUrl && (
+        <div className="wine-image-container">
+          <img 
+            src={getImageUrl(wine.imageUrl)} 
+            alt={wine.wineName}
+            className="wine-image"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = '/wine-placeholder.svg';
+            }}
+          />
+        </div>
+      )}
+      
       {/* Wine Info - Read Only */}
       <div className="wine-info">
         <div className="info-row">
