@@ -65,6 +65,10 @@ export default function ManualWineForm({ onSubmit, onCancel, t, location = 'FRID
       setError('Vintage year is required');
       return;
     }
+    if (!type.trim()) {
+      setError('Wine type is required');
+      return;
+    }
 
     const wine: DiscoveredWine = {
       wineName: wineName.trim(),
@@ -165,10 +169,16 @@ export default function ManualWineForm({ onSubmit, onCancel, t, location = 'FRID
       </div>
 
       <div className="form-group">
-        <label>{t('wines.wine_type') || 'Wine Type'}</label>
+        <label>
+          {t('wines.wine_type') || 'Wine Type'}
+          <span className="required">*</span>
+        </label>
         <select
           value={type}
-          onChange={(e) => setType(e.target.value)}
+          onChange={(e) => {
+            setType(e.target.value);
+            setError('');
+          }}
           className="input-field"
         >
           <option value="">Select wine type...</option>
@@ -182,10 +192,16 @@ export default function ManualWineForm({ onSubmit, onCancel, t, location = 'FRID
       </div>
 
       <div className="form-group">
-        <label>{t('wine_discovery.vintage') || 'Vintage'}</label>
+        <label>
+          {t('wine_discovery.vintage') || 'Vintage'}
+          <span className="required">*</span>
+        </label>
         <select
           value={vintage}
-          onChange={(e) => setVintage(e.target.value)}
+          onChange={(e) => {
+            setVintage(e.target.value);
+            setError('');
+          }}
           className="input-field"
         >
           <option value="">{t('wine_discovery.select_vintage') || 'Select year...'}</option>

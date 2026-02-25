@@ -280,6 +280,10 @@ public class WineDiscoveryService {
             }
             wine.setRegion(region);
             
+            // Extract wine type (RED, WHITE, ROSÉ) from snippet
+            String wineType = extractWineTypeFromSnippet(snippet);
+            wine.setType(wineType);
+            
             // Set country (default to Israel for Israeli wines like Yatir)
             wine.setCountry("Israel");
             
@@ -493,5 +497,43 @@ public class WineDiscoveryService {
      */
     public List<GlobalWine> getAllValidatedWines() {
         return globalWineRepository.findByAiValidatedTrue();
+    }
+
+    /**
+     * Extract wine type (RED, WHITE, ROSÉ) from snippet
+     */
+    private String extractWineTypeFromSnippet(String snippet) {
+        if (snippet == null || snippet.isEmpty()) {
+            return "RED"; // Default fallback
+        }
+        
+        String lowerSnippet = snippet.toLowerCase();
+        
+        // Check for white wine indicators
+        if (lowerSnippet.contains("white wine") || 
+            lowerSnippet.contains("sauvignon blanc") || 
+            lowerSnippet.contains("chardonnay") || 
+            lowerSnippet.contains("riesling") ||
+            lowerSnippet.contains("pinot grigio") ||
+            lowerSnippet.contains("verdejo")) {
+            return "WHITE";
+        }
+        
+        // Check for rosé wine indicators
+        if (lowerSnippet.contains("rosé") || 
+            lowerSnippet.contains("rose wine") ||
+            lowerSnippet.contains("rose")) {
+            return "ROSÉ";
+        }
+        
+        // Check for sparkling/champagne
+        if (lowerSnippet.contains("sparkling") || 
+            lowerSnippet.contains("champagne") ||
+            lowerSnippet.contains("prosecco")) {
+            return "SPARKLING";
+        }
+        
+        // Default to RED for most wines (most wines are red)
+        return "RED";
     }
 }

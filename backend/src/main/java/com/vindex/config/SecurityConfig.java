@@ -1,5 +1,4 @@
 package com.vindex.config;
-
 import com.vindex.security.JwtAuthenticationEntryPoint;
 import com.vindex.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
@@ -87,6 +86,9 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/health").permitAll()
                     .requestMatchers(HttpMethod.GET, "/wines/search").permitAll()
                     .requestMatchers("/wine-discovery/**").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/api/wine-images/**").permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/wine-images/**").permitAll()
+                    .requestMatchers(HttpMethod.DELETE, "/api/wine-images/**").permitAll()
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().authenticated()
                 )

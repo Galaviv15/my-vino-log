@@ -23,11 +23,15 @@ public class WineDiscoveryResponse {
     
     private String vintage;
     
+    private String type;
+    
     private List<String> grapes;
     
     private String region;
     
     private String country;
+    
+    private String imageUrl;
     
     @JsonProperty("alcoholContent")
     private Double alcoholContent;

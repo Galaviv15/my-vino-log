@@ -421,10 +421,14 @@ export default function CellarGridPage() {
           setSelectedWine({ ...selectedWine, imageUrl: result.imageUrl });
         }
       } else {
-        setImageError('Failed to upload image');
+        setImageError('Failed to upload image. Please try logging in again if the issue persists.');
       }
-    } catch (error) {
-      setImageError('Error uploading image');
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        setImageError('Please log in again to upload images.');
+      } else {
+        setImageError('Error uploading image');
+      }
       console.error('Image upload error:', error);
     } finally {
       setUploadingImageId(null);
@@ -796,6 +800,9 @@ export default function CellarGridPage() {
                             src={wine.imageUrl || '/wine-placeholder.svg'}
                             alt="Wine"
                             className="w-10 h-10 rounded-md object-cover border border-cream"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = '/wine-placeholder.svg';
+                            }}
                           />
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-wine-900">{wine.name}</div>
@@ -1002,6 +1009,9 @@ export default function CellarGridPage() {
                   src={getImageUrl(selectedWine.imageUrl) || '/wine-placeholder.svg'}
                   alt={selectedWine.name}
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/wine-placeholder.svg';
+                  }}
                 />
                 <button
                   onClick={() => setSelectedWine(null)}
@@ -1009,26 +1019,6 @@ export default function CellarGridPage() {
                 >
                   ✕
                 </button>
-                
-                {/* Edit Image Button */}
-                <label
-                  className="absolute bottom-2 right-2 bg-wine-600 hover:bg-wine-700 text-white rounded-full p-2 cursor-pointer transition shadow-lg flex items-center justify-center"
-                  title="Edit wine image"
-                >
-                  ✏️
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        handleImageUpload(selectedWine.id, file);
-                      }
-                    }}
-                    disabled={uploadingImageId === selectedWine.id}
-                    className="hidden"
-                  />
-                </label>
               </div>
 
               {/* Content */}
@@ -1181,8 +1171,10 @@ export default function CellarGridPage() {
 
               {/* Form Content */}
               <form onSubmit={handleSubmit} className="p-6 space-y-4" autoComplete="off">
-                {/* Smart Wine Search */}
-                <SmartWineSearch onWineSelected={handleDiscoveredWinePicked} isLoading={savingWine} />
+                {/* Smart Wine Search - Only show when adding new wine, not when editing */}
+                {!editingWine && (
+                  <SmartWineSearch onWineSelected={handleDiscoveredWinePicked} isLoading={savingWine} />
+                )}
 
                 {/* Wine Name */}
                 <div>

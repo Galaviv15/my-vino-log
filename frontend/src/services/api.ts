@@ -30,8 +30,15 @@ apiClient.interceptors.request.use(
   (config) => {
     const token = getStorageItem('accessToken');
     const hadAuth = Boolean(token);
+    console.log('API Request interceptor:', { 
+      url: config.url, 
+      method: config.method,
+      hasToken: hadAuth,
+      tokenPreview: token ? token.substring(0, 20) + '...' : 'none'
+    });
     if (hadAuth) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Authorization header set:', config.headers.Authorization?.substring(0, 30) + '...');
     }
     (config as typeof config & { _hadAuth?: boolean })._hadAuth = hadAuth;
     return config;

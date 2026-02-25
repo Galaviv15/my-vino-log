@@ -5,7 +5,11 @@ import jakarta.validation.constraints.NotBlank;
 public class WineRequest {
     @NotBlank
     private String name;
+    
+    @NotBlank
     private String type;
+    
+    @NotBlank
     private String vintage;
     private Integer quantity;
     private String winery;
