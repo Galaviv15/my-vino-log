@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import apiClient from '../services/api';
+import SmartWineSearch from '../components/SmartWineSearch';
+import { DiscoveredWine } from '../services/wineDiscovery';
 
 interface LocalWine {
   id: number;
@@ -344,6 +346,25 @@ export default function CellarGridPage() {
       vintage: '',
     }));
     setShowSuggestions(false);
+  };
+
+  const handleDiscoveredWinePicked = (discoveredWine: DiscoveredWine) => {
+    setFormData({
+      name: discoveredWine.wineName,
+      type: '', // Will need to be selected manually
+      vintage: discoveredWine.vintage || '',
+      quantity: '1',
+      location: 'FRIDGE',
+      rowId: '',
+      winery: discoveredWine.winery || '',
+      grapeVariety: discoveredWine.grapes || [],
+    });
+    setFormErrors((prev) => ({
+      ...prev,
+      name: '',
+      vintage: '',
+    }));
+    setShowAddForm(true);
   };
 
   const handleEditStart = (wine: LocalWine) => {
@@ -992,6 +1013,9 @@ export default function CellarGridPage() {
 
               {/* Form Content */}
               <form onSubmit={handleSubmit} className="p-6 space-y-4" autoComplete="off">
+                {/* Smart Wine Search */}
+                <SmartWineSearch onWineSelected={handleDiscoveredWinePicked} isLoading={savingWine} />
+
                 {/* Wine Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

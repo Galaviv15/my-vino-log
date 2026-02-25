@@ -19,28 +19,54 @@ interface AuthState {
   setUser: (user: AuthUser) => void;
 }
 
+// Safe localStorage access with fallback
+const getStorageItem = (key: string): string | null => {
+  try {
+    return localStorage.getItem(key);
+  } catch (e) {
+    console.warn('localStorage not available:', e);
+    return null;
+  }
+};
+
+const setStorageItem = (key: string, value: string): void => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn('localStorage not available:', e);
+  }
+};
+
+const removeStorageItem = (key: string): void => {
+  try {
+    localStorage.removeItem(key);
+  } catch (e) {
+    console.warn('localStorage not available:', e);
+  }
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: !!localStorage.getItem('accessToken'),
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
-  accessToken: localStorage.getItem('accessToken'),
-  refreshToken: localStorage.getItem('refreshToken'),
+  isAuthenticated: !!getStorageItem('accessToken'),
+  user: JSON.parse(getStorageItem('user') || 'null'),
+  accessToken: getStorageItem('accessToken'),
+  refreshToken: getStorageItem('refreshToken'),
   
   setAuth: (user, accessToken, refreshToken) => {
-    localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    setStorageItem('user', JSON.stringify(user));
+    setStorageItem('accessToken', accessToken);
+    setStorageItem('refreshToken', refreshToken);
     set({ isAuthenticated: true, user, accessToken, refreshToken });
   },
   
   logout: () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    removeStorageItem('user');
+    removeStorageItem('accessToken');
+    removeStorageItem('refreshToken');
     set({ isAuthenticated: false, user: null, accessToken: null, refreshToken: null });
   },
   
   setUser: (user) => {
-    localStorage.setItem('user', JSON.stringify(user));
+    setStorageItem('user', JSON.stringify(user));
     set({ user });
   },
 }));

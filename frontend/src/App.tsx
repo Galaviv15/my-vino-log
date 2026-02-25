@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './i18n/config';
 import './index.css';
@@ -16,6 +16,20 @@ import ProfilePage from './pages/ProfilePage';
 // Components
 import PrivateRoute from './components/PrivateRoute';
 import Header from './components/Header';
+
+function AuthRedirect() {
+  const { isAuthenticated } = useAuthStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isAuthenticated && location.pathname !== '/login' && location.pathname !== '/register') {
+      navigate('/login', { replace: true });
+    }
+  }, [isAuthenticated, location.pathname, navigate]);
+
+  return null;
+}
 
 function App() {
   const { i18n } = useTranslation();
@@ -40,6 +54,7 @@ function App() {
 
   return (
     <Router>
+      <AuthRedirect />
       <div className="min-h-screen flex flex-col">
         {isAuthenticated && <Header />}
         {!isAuthenticated && (

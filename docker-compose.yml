@@ -30,8 +30,8 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/vindex_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: vindex_user
       SPRING_DATASOURCE_PASSWORD: vindex_password
-      JWT_SECRET: ${JWT_SECRET:-your-secret-key-change-this-in-production-must-be-at-least-256-bits-long}
-      SPRING_AI_GOOGLE_GEMINI_API_KEY: ${SPRING_AI_GOOGLE_GEMINI_API_KEY:-}
+      JWT_SECRET: ${JWT_SECRET:-a-very-secure-jwt-secret-key-that-is-long-enough-for-hs512-algorithm-production1234}
+      SPRING_AI_GOOGLE_AI_GEMINI_API_KEY: ${SPRING_AI_GOOGLE_AI_GEMINI_API_KEY:-}
       SERPER_API_KEY: ${SERPER_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       SNOOTH_API_KEY: ${SNOOTH_API_KEY:-}

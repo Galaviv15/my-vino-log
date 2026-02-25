@@ -20,14 +20,14 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-
     try {
       const response = await apiClient.post('/auth/login', formData);
       const { user, accessToken, refreshToken } = response.data;
       setAuth(user, accessToken, refreshToken);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed');
+      const errorMsg = err.response?.data?.message || err.message || 'Login failed';
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

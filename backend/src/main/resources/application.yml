@@ -10,21 +10,23 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQL8Dialect
   datasource:
-    url: jdbc:mysql://localhost:3306/vindex_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3307/vindex_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: vindex_user
     password: vindex_password
     driver-class-name: com.mysql.cj.jdbc.Driver
   flyway:
     locations: classpath:db/migration
     baseline-on-migrate: true
-  ai:
-    google:
-      gemini:
-        api-key: ${SPRING_AI_GOOGLE_GEMINI_API_KEY:}
-        chat:
-          options:
-            model: gemini-1.5-flash
-            temperature: 0.7
+  # ai:
+  #   google:
+  #     genai:
+  #       api-key: ${SPRING_AI_GOOGLE_GENAI_API_KEY:}
+  #       project-id: ${SPRING_AI_GOOGLE_GENAI_PROJECT_ID:vindex-wine-cellar}
+  #       location: ${SPRING_AI_GOOGLE_GENAI_LOCATION:us-central1}
+  #       chat:
+  #         options:
+  #           model: gemini-1.5-flash
+  #           temperature: 0.7
 
 server:
   port: 8080
@@ -32,7 +34,7 @@ server:
     context-path: /api
 
 jwt:
-  secret: your-secret-key-change-this-in-production-must-be-at-least-256-bits-long
+  secret: a-very-secure-jwt-secret-key-that-is-long-enough-for-hs512-algorithm-production1234
   expiration: 3600000
   refresh-expiration: 2592000000
 
@@ -56,3 +58,5 @@ wine-discovery:
   cache-results: true
   validate-before-save: true
   max-search-results: 3
+  # gemini-retry-count: 2
+  # gemini-retry-delay-ms: 2000

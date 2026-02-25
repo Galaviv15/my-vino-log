@@ -2,8 +2,8 @@
   "common": {
     "app_name": "Vino Log",
     "welcome": "ברוכים הבאים ל-Vino Log",
-    "loading": "טוען...",
-    "error": "שגיאה",
+    "loading": "טוען...",    "searching": "מחפש...",
+    "search": "חיפוש",    "error": "שגיאה",
     "success": "הצליח",
     "cancel": "ביטול",
     "delete": "מחק",
@@ -128,6 +128,27 @@
     "account": "חשבון",
     "change_password": "שנה סיסמה",
     "logout_confirm": "האם אתה בטוח שברצונך להתנתק?"
+  },
+  "wine_discovery": {
+    "smart_search": "חיפוש יין חכם",
+    "title": "גילוי יין חכם",
+    "description": "חפש במסד הנתונים שלנו או השתמש בבינה מלאכותית לגילוי פרטי יין",
+    "winery": "יקב",
+    "winery_placeholder": "למשל, Domaine de la Romanée",
+    "wine_name": "שם היין",
+    "wine_name_placeholder": "למשל, La Tâche",
+    "vintage": "בשנה",
+    "vintage_placeholder": "למשל, 2019 או להשאיר ריק",
+    "grapes": "ענבים",
+    "region": "אזור",
+    "country": "מדינה",
+    "alcohol_content": "ריכוז אלכוהול",
+    "ai_validated": "מאומת על ידי AI",
+    "found": "יין נמצא",
+    "use_result": "השתמש ביין זה",
+    "no_results": "לא היה ניתן למצוא פרטי יין. אנא הזן ידנית.",
+    "fill_required_fields": "אנא מלא יקב ושם יין",
+    "searching": "מחפש..."
   },
   "validation": {
     "required": "שדה זה נדרש",

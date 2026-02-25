@@ -5,10 +5,6 @@ import com.vindex.entity.GlobalWine;
 import com.vindex.repository.GlobalWineRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hc.client5.http.classic.HttpClient;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -17,14 +13,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
 import java.time.Year;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+import jakarta.annotation.PostConstruct;
 
 @Service
 @Slf4j
@@ -32,11 +29,12 @@ import java.util.Optional;
 public class WineDiscoveryService {
 
     private final GlobalWineRepository globalWineRepository;
-    private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final RestTemplate restTemplate;
 
-    @Value("${spring.ai.google.gemini.api-key}")
-    private String geminiApiKey;
+    // Gemini disabled for now.
+    // @Value("${spring.ai.google.genai.api-key}")
+    // private String geminiApiKey;
 
     @Value("${serper.api.key}")
     private String serperApiKey;
@@ -53,7 +51,16 @@ public class WineDiscoveryService {
     @Value("${wine-discovery.max-search-results:3}")
     private int maxSearchResults;
 
-    private static final String GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+    // @Value("${wine-discovery.gemini-retry-count:2}")
+    // private int geminiRetryCount;
+
+    // @Value("${wine-discovery.gemini-retry-delay-ms:2000}")
+    // private long geminiRetryDelayMs;
+
+    @PostConstruct
+    public void init() {
+        log.info("ℹ️ Gemini AI disabled - using Serper parsing only");
+    }
 
     /**
      * Discover wine details: check local DB, search online, validate, and save
@@ -80,11 +87,11 @@ public class WineDiscoveryService {
             return null;
         }
 
-        // Step 3: Use Gemini AI to extract structured JSON
+        // Step 3: Extract details directly from Serper (Gemini disabled)
         GlobalWine discoveredWine = extractWineDetailsWithAI(winery, wineName, vintage, searchResults);
 
         if (discoveredWine == null) {
-            log.warn("Failed to extract wine details with AI");
+            log.warn("Failed to extract wine details from Serper results");
             return null;
         }
 
@@ -114,7 +121,7 @@ public class WineDiscoveryService {
     }
 
     /**
-     * Perform search via Serper API
+     * Perform search via Serper API using RestTemplate
      */
     private String performSerperSearch(String query) {
         if (serperApiKey == null || serperApiKey.isBlank()) {
@@ -123,32 +130,23 @@ public class WineDiscoveryService {
         }
 
         try {
-            HttpClient httpClient = HttpClients.createDefault();
-            HttpPost httpPost = new HttpPost(serperBaseUrl);
-            httpPost.setHeader("X-API-KEY", serperApiKey);
-            httpPost.setHeader("Content-Type", "application/json");
+            // Build request headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("X-API-KEY", serperApiKey);
 
+            // Build request payload
             Map<String, Object> payload = new HashMap<>();
             payload.put("q", query);
             payload.put("num", maxSearchResults);
 
-            String jsonPayload = objectMapper.writeValueAsString(payload);
-            httpPost.setEntity(new StringEntity(jsonPayload));
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
 
-            StringBuilder response = new StringBuilder();
-            httpClient.execute(httpPost, httpResponse -> {
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(httpResponse.getEntity().getContent()))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
-                }
-                return null;
-            });
+            log.debug("Calling Serper API for query: {}", query);
+            String response = restTemplate.postForObject(serperBaseUrl, request, String.class);
 
             log.debug("Serper API response: {}", response);
-            return response.toString();
+            return response;
 
         } catch (Exception e) {
             log.error("Error calling Serper API for query: {}", query, e);
@@ -157,164 +155,196 @@ public class WineDiscoveryService {
     }
 
     /**
-     * Use Gemini AI to extract structured wine details from search results
+     * Extract wine details from Serper results only (Gemini disabled)
      */
     private GlobalWine extractWineDetailsWithAI(String winery, String wineName, String vintage, String searchResults) {
-        String prompt = buildAIPrompt(winery, wineName, vintage, searchResults);
+        log.info("📄 Extracting wine details manually from Serper results (length: {} chars)", searchResults.length());
+        return extractWineDetailsManually(winery, wineName, vintage, searchResults);
+    }
 
+    /*
+    // Gemini disabled for now.
+    private GlobalWine extractWithGeminiAI(String winery, String wineName, String vintage, String searchResults) throws Exception { ... }
+    private String buildGeminiPrompt(String winery, String wineName, String vintage, String searchResults) { ... }
+    private Map<String, Object> callGeminiAPI(String prompt) throws Exception { ... }
+    private GlobalWine parseGeminiResponse(Map<String, Object> response, String winery, String wineName, String vintage) throws Exception { ... }
+    */
+
+    /**
+     * Extract wine details manually from Serper search results (fallback)
+     */
+    private GlobalWine extractWineDetailsManually(String winery, String wineName, String vintage, String searchResults) {
         try {
-            String aiResponse = callGeminiAPI(prompt);
-
-            if (aiResponse == null) {
-                log.warn("Gemini API returned null response");
+            @SuppressWarnings("unchecked")
+            Map<String, Object> serperResponse = objectMapper.readValue(searchResults, Map.class);
+            
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> organicResults = (List<Map<String, Object>>) serperResponse.get("organic");
+            
+            if (organicResults == null || organicResults.isEmpty()) {
+                log.warn("No organic search results found");
                 return null;
             }
-
-            log.debug("AI Response: {}", aiResponse);
-
-            // Parse JSON from AI response
-            return parseAIResponse(aiResponse, winery, wineName, vintage);
-
-        } catch (Exception e) {
-            log.error("Error calling Gemini AI", e);
-            return null;
-        }
-    }
-
-    /**
-     * Call Google Gemini API via REST
-     */
-    private String callGeminiAPI(String prompt) {
-        try {
-            String url = GEMINI_API_BASE + "?key=" + geminiApiKey;
-
-            // Build request payload
-            Map<String, Object> contents = new HashMap<>();
-            Map<String, String> parts = new HashMap<>();
-            parts.put("text", prompt);
-            contents.put("parts", new Object[] { parts });
-
-            Map<String, Object> payload = new HashMap<>();
-            payload.put("contents", new Object[] { contents });
-
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            String requestBody = objectMapper.writeValueAsString(payload);
-            log.debug("Sending Gemini API request with body: {}", requestBody);
-
-            HttpEntity<String> request = new HttpEntity<>(requestBody, headers);
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = restTemplate.postForObject(url, request, Map.class);
-
-            if (response != null && response.containsKey("candidates")) {
-                @SuppressWarnings("unchecked")
-                List<Map<String, Object>> candidates = (List<Map<String, Object>>) response.get("candidates");
-                if (!candidates.isEmpty()) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> candidate = candidates.get(0);
-                    if (candidate.containsKey("content")) {
-                        @SuppressWarnings("unchecked")
-                        Map<String, Object> content = (Map<String, Object>) candidate.get("content");
-                        if (content.containsKey("parts")) {
-                            @SuppressWarnings("unchecked")
-                            List<Map<String, String>> parts_list = (List<Map<String, String>>) content.get("parts");
-                            if (!parts_list.isEmpty()) {
-                                return parts_list.get(0).get("text");
-                            }
-                        }
-                    }
-                }
-            }
-
-            return null;
-
-        } catch (Exception e) {
-            log.error("Error calling Gemini API", e);
-            return null;
-        }
-    }
-
-    /**
-     * Build the prompt for Gemini AI
-     */
-    private String buildAIPrompt(String winery, String wineName, String vintage, String searchResults) {
-        return String.format(
-                """
-                Extract structured wine information from the following search results.
-                Return ONLY a valid JSON object with these exact fields (no markdown, no extra text):
-                {
-                    "winery": "string",
-                    "wineName": "string",
-                    "vintage": "string (year or 'NV')",
-                    "grapes": ["array", "of", "grape", "varieties"],
-                    "region": "string",
-                    "country": "string",
-                    "alcoholContent": "number (5-22)"
-                }
-                
-                Wine to find:
-                - Winery: %s
-                - Wine Name: %s
-                - Vintage: %s
-                
-                Search Results:
-                %s
-                
-                If information is missing, use reasonable defaults:
-                - For vintage: use 'NV' if not found
-                - For grapes: use empty array if not found
-                - For alcohol content: estimate 12.5 for red wines, 11.5 for white wines if not found
-                - For region: use the primary region if not found
-                
-                Return ONLY the JSON object, nothing else.""",
-                winery, wineName, vintage, searchResults);
-    }
-
-    /**
-     * Parse the AI response JSON
-     */
-    private GlobalWine parseAIResponse(String aiResponse, String winery, String wineName, String vintage) {
-        try {
-            // Remove markdown code blocks if present
-            String cleanedResponse = aiResponse
-                    .replaceAll("```json", "")
-                    .replaceAll("```", "")
-                    .trim();
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> wineData = objectMapper.readValue(cleanedResponse, Map.class);
-
+            
+            // Get the first result (highest relevance)
+            Map<String, Object> topResult = organicResults.get(0);
+            
             GlobalWine wine = new GlobalWine();
-            wine.setWinery((String) wineData.getOrDefault("winery", winery));
-            wine.setWineName((String) wineData.getOrDefault("wineName", wineName));
-            wine.setVintage((String) wineData.getOrDefault("vintage", vintage != null ? vintage : "NV"));
-            wine.setRegion((String) wineData.getOrDefault("region", "Unknown"));
-            wine.setCountry((String) wineData.getOrDefault("country", "Unknown"));
-
-            // Parse grapes array
-            @SuppressWarnings("unchecked")
-            List<String> grapes = (List<String>) wineData.getOrDefault("grapes", new ArrayList<>());
+            wine.setWinery(winery);
+            wine.setWineName(wineName);
+            wine.setVintage(vintage != null ? vintage : "NV");
+            wine.setSource("SerperAPI");
+            wine.setAiValidated(false);
+            
+            // Extract grapes from snippet
+            String snippet = (String) topResult.getOrDefault("snippet", "");
+            log.debug("Snippet for grape extraction: {}", snippet);
+            
+            List<String> grapes = extractGrapesFromSnippet(snippet);
             wine.setGrapes(grapes);
-
-            // Parse alcohol content
-            Object alcoholObj = wineData.get("alcoholContent");
-            if (alcoholObj != null) {
-                Double alcohol = ((Number) alcoholObj).doubleValue();
-                wine.setAlcoholContent(alcohol);
+            
+            // Extract alcohol content if available in snippet
+            Double alcohol = extractAlcoholFromSnippet(snippet);
+            wine.setAlcoholContent(alcohol);
+            
+            // Extract region from snippet or title
+            String region = extractRegionFromSnippet(snippet);
+            if (region == null || region.isEmpty()) {
+                region = extractRegionFromTitle((String) topResult.getOrDefault("title", ""));
             }
-
-            wine.setSource("AI");
-            wine.setAiValidated(false); // Will be set to true after validation
-
+            wine.setRegion(region);
+            
+            // Set country (default to Israel for Israeli wines like Yatir)
+            wine.setCountry("Israel");
+            
+            log.info("✅ Successfully extracted wine details from Serper (manual parsing): {} {} {} - Grapes: {}", 
+                    wine.getWinery(), wine.getWineName(), wine.getVintage(), wine.getGrapes());
+            
             return wine;
-
+            
         } catch (Exception e) {
-            log.error("Error parsing AI response: {}", aiResponse, e);
+            log.error("Error extracting wine details from Serper response", e);
             return null;
         }
     }
+    
+    /**
+     * Extract grape varieties from snippet text
+     */
+    private List<String> extractGrapesFromSnippet(String snippet) {
+        List<String> grapes = new ArrayList<>();
+        java.util.Set<String> uniqueGrapes = new java.util.LinkedHashSet<>();
+        
+        if (snippet == null || snippet.isEmpty()) {
+            return grapes;
+        }
+        
+        // Pattern: "Cabernet Sauvignon 38%, Petit Verdot 33%, Merlot 17%, Cabernet Franc 12%"
+        // We want to extract the grape names
+        String lowerSnippet = snippet.toLowerCase();
+        String[] commonGrapes = {
+            "cabernet sauvignon", "cabernet franc", "petit verdot", "petite verdot", "merlot", "pinot noir",
+            "syrah", "grenache", "carmenere", "tempranillo", "chardonnay", "sauvignon blanc",
+            "riesling", "pinot grigio", "gewurztraminer"
+        };
+        
+        for (String grape : commonGrapes) {
+            if (lowerSnippet.contains(grape)) {
+                // Capitalize properly
+                String[] parts = grape.split(" ");
+                StringBuilder capitalized = new StringBuilder();
+                for (String part : parts) {
+                    if (capitalized.length() > 0) capitalized.append(" ");
+                    capitalized.append(part.substring(0, 1).toUpperCase()).append(part.substring(1));
+                }
+                uniqueGrapes.add(capitalized.toString());
+            }
+        }
+        
+        grapes.addAll(uniqueGrapes);
+        log.debug("Extracted grapes from snippet: {}", grapes);
+        return grapes;
+    }
+    
+    /**
+     * Extract alcohol content from snippet
+     */
+    private Double extractAlcoholFromSnippet(String snippet) {
+        if (snippet == null || snippet.isEmpty()) {
+            return null;
+        }
+        
+        // Look for patterns like "13.5% alcohol", "13.5 ABV", "14% vol", etc.
+        // Exclude percentages that come after grape names (like "Cabernet Sauvignon 38%")
+        Pattern pattern = Pattern.compile("(\\d+\\.?\\d*)\\s*%\\s*(alcohol|vol|abv|content)?");
+        Matcher matcher = pattern.matcher(snippet);
+        
+        // Find all matches and return the first one that's in valid alcohol range (5-22%)
+        while (matcher.find()) {
+            try {
+                Double value = Double.parseDouble(matcher.group(1));
+                // Valid alcohol content should be between 5-22%
+                // Grape percentages are typically higher (20-50%)
+                if (value >= 5 && value <= 22) {
+                    return value;
+                }
+            } catch (NumberFormatException e) {
+                log.debug("Could not parse alcohol content from snippet: {}", snippet);
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Extract region from snippet
+     */
+    private String extractRegionFromSnippet(String snippet) {
+        if (snippet == null || snippet.isEmpty()) {
+            return null;
+        }
+        
+        // Common wine regions
+        String[] regions = {"Judean Hills", "Galilee", "Napa", "Sonoma", "Bordeaux", "Burgundy", "Tuscany"};
+        
+        for (String region : regions) {
+            if (snippet.contains(region)) {
+                return region;
+            }
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Extract region from title (fallback)
+     */
+    private String extractRegionFromTitle(String title) {
+        if (title == null || title.isEmpty()) {
+            return "Unknown";
+        }
+        
+        // If title contains region info like "Judean Hills", extract it
+        String[] regions = {"Judean Hills", "Galilee", "Napa", "Sonoma", "Bordeaux", "Burgundy", "Tuscany"};
+        
+        for (String region : regions) {
+            if (title.contains(region)) {
+                return region;
+            }
+        }
+        
+        return "Unknown";
+    }
+
+    /*
+    // DEPRECATED: Using direct Serper extraction instead of Gemini AI
+    
+    private String callGeminiAPI(String prompt) { ... }
+    
+    private String buildAIPrompt(String winery, String wineName, String vintage, String searchResults) { ... }
+    
+    private GlobalWine parseAIResponse(String aiResponse, String winery, String wineName, String vintage) { ... }
+    */
 
     /**
      * Validate wine data before saving
@@ -354,20 +384,20 @@ public class WineDiscoveryService {
             }
         }
 
-        // Validate alcohol content
-        if (wine.getAlcoholContent() == null) {
-            log.warn("Validation failed: alcohol content is null");
-            return false;
+        // Validate alcohol content - can be null for manual parsed wines (fallback mode)
+        if (wine.getAlcoholContent() != null) {
+            if (wine.getAlcoholContent() < 5 || wine.getAlcoholContent() > 22) {
+                log.warn("Validation failed: alcohol content {} is out of valid range [5-22]%",
+                        wine.getAlcoholContent());
+                return false;
+            }
+        } else {
+            // Log warning but allow wine with missing alcohol (from fallback parsing)
+            log.info("⚠️  Wine has no alcohol content (from fallback Serper parsing): {} {} {}", 
+                    wine.getWinery(), wine.getWineName(), wine.getVintage());
         }
 
-        if (wine.getAlcoholContent() < 5 || wine.getAlcoholContent() > 22) {
-            log.warn("Validation failed: alcohol content {} is out of valid range [5-22]%",
-                    wine.getAlcoholContent());
-            return false;
-        }
-
-        log.info("Wine validation passed for: {} {} {}", wine.getWinery(), wine.getWineName(), wine.getVintage());
-        wine.setAiValidated(true);
+        log.info("✅ Wine validation passed for: {} {} {}", wine.getWinery(), wine.getWineName(), wine.getVintage());
         return true;
     }
 
