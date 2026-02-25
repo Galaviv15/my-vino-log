@@ -31,6 +31,9 @@ public class GlobalWine {
     @Column(name = "type", nullable = false)
     private String type; // Red, White, Rosé, Sparkling, Dessert, Fortified
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl; // Wine bottle image URL
+
     @Column(name = "grapes", columnDefinition = "JSON")
     @JdbcTypeCode(SqlTypes.JSON)
     private List<String> grapes;

@@ -103,7 +103,16 @@ public class WineDiscoveryService {
             }
         }
 
-        // Step 5: Save to database
+        // Step 5: Search for wine image
+        String imageUrl = searchWineImage(winery, wineName, vintage);
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            discoveredWine.setImageUrl(imageUrl);
+            log.info("Wine image found: {}", imageUrl);
+        } else {
+            log.info("No wine image found, will use placeholder");
+        }
+
+        // Step 6: Save to database
         GlobalWine savedWine = globalWineRepository.save(discoveredWine);
         log.info("Wine saved successfully with ID: {}", savedWine.getId());
 
@@ -118,6 +127,63 @@ public class WineDiscoveryService {
             return String.format("%s %s %s wine", winery, wineName, vintage);
         }
         return String.format("%s %s wine", winery, wineName);
+    }
+
+    /**
+     * Search for wine bottle image using Serper Image Search API
+     */
+    private String searchWineImage(String winery, String wineName, String vintage) {
+        if (serperApiKey == null || serperApiKey.isBlank()) {
+            log.warn("Serper API key not configured for image search");
+            return null;
+        }
+
+        try {
+            // Build image search query
+            String imageQuery = buildSearchQuery(winery, wineName, vintage) + " bottle";
+            
+            // Build request headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("X-API-KEY", serperApiKey);
+
+            // Build request payload for image search
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("q", imageQuery);
+            payload.put("num", 1); // Only need first image result
+
+            HttpEntity<Map<String, Object>> request = new HttpEntity<>(payload, headers);
+
+            // Use Serper Image Search endpoint
+            String imageSearchUrl = "https://google.serper.dev/images";
+            log.debug("Calling Serper Image API for query: {}", imageQuery);
+            String response = restTemplate.postForObject(imageSearchUrl, request, String.class);
+
+            if (response == null || response.isEmpty()) {
+                log.warn("No image search response from Serper");
+                return null;
+            }
+
+            // Parse response to extract first image URL
+            @SuppressWarnings("unchecked")
+            Map<String, Object> imageResponse = objectMapper.readValue(response, Map.class);
+            
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> images = (List<Map<String, Object>>) imageResponse.get("images");
+            
+            if (images != null && !images.isEmpty()) {
+                String imageUrl = (String) images.get(0).get("imageUrl");
+                log.info("Found wine image: {}", imageUrl);
+                return imageUrl;
+            }
+
+            log.info("No wine images found in Serper response");
+            return null;
+
+        } catch (Exception e) {
+            log.error("Error searching for wine image: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
