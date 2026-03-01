@@ -56,7 +56,7 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
     setSearchResults(null);
 
     if (!winery.trim() || !wineName.trim()) {
-      setError(t('wine_discovery.fill_required_fields') || 'Please fill in winery and wine name');
+      setError(t('wine_discovery.fill_required_fields') || 'Please fill in both Winery (e.g., "Yarden") and Wine Name (e.g., "Cabernet Sauvignon")');
       return;
     }
 
@@ -106,7 +106,7 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
         <div className="search-panel">
           <h3>{t('wine_discovery.title') || 'Smart Wine Discovery'}</h3>
           <p className="search-description">
-            {t('wine_discovery.description') || 'Search our database or use AI to discover wine details'}
+            {t('wine_discovery.description') || 'Enter wine details separately - for "Yarden Cabernet 2020": Winery="Yarden", Wine="Cabernet Sauvignon", Year="2020"'}
           </p>
 
           <div
@@ -125,7 +125,7 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
                 type="text"
                 value={winery}
                 onChange={(e) => setWinery(e.target.value)}
-                placeholder={t('wine_discovery.winery_placeholder') || 'e.g., Domaine de la Romanée'}
+                placeholder={t('wine_discovery.winery_placeholder') || 'e.g., Yarden, Barkan, Carmel'}
                 disabled={searching}
               />
             </div>
@@ -138,7 +138,7 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
                 value={wineName}
                 onChange={(e) => setWineName(e.target.value)}
                 onFocus={() => wineName.trim().length >= 2 && setShowSuggestions(true)}
-                placeholder={t('wine_discovery.wine_name_placeholder') || 'e.g., La Tâche'}
+                placeholder={t('wine_discovery.wine_name_placeholder') || 'e.g., Cabernet Sauvignon, Merlot, Chardonnay'}
                 disabled={searching}
                 autoComplete="off"
               />
@@ -162,13 +162,13 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
             </div>
 
             <div className="form-group">
-              <label htmlFor="vintage">{t('wine_discovery.vintage') || 'Vintage'}</label>
+              <label htmlFor="vintage">{t('wine_discovery.vintage') || 'Year (Vintage)'}</label>
               <input
                 id="vintage"
                 type="text"
                 value={vintage}
                 onChange={(e) => setVintage(e.target.value)}
-                placeholder={t('wine_discovery.vintage_placeholder') || 'e.g., 2019 or leave blank'}
+                placeholder={t('wine_discovery.vintage_placeholder') || 'e.g., 2020, 2019 (optional)'}
                 disabled={searching}
               />
             </div>

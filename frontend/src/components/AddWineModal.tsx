@@ -64,6 +64,8 @@ export default function AddWineModal({
 
   // Search state
   const [wineName, setWineName] = useState('');
+  const [winery, setWinery] = useState('');
+  const [searchVintage, setSearchVintage] = useState('');
   const [suggestions, setSuggestions] = useState<DiscoveredWine[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -113,14 +115,16 @@ export default function AddWineModal({
     setGrapeVariety(wine.grapes || []);
     setCurrentStep('preview');
     setWineName('');
+    setWinery('');
+    setSearchVintage('');
     setSuggestions([]);
     setShowSuggestions(false);
     setError('');
   };
 
   const handleSearchSerper = async () => {
-    if (!wineName.trim()) {
-      setError(t('wine_discovery.fill_required_fields') || 'Please enter a wine name');
+    if (!wineName.trim() || !winery.trim()) {
+      setError(t('wine_discovery.fill_required_fields') || 'Please enter both winery and wine name');
       return;
     }
 
@@ -128,15 +132,15 @@ export default function AddWineModal({
     setError('');
     try {
       const result = await discoverWine({
+        winery: winery.trim(),
         wineName: wineName.trim(),
-        winery: '',
-        vintage: undefined,
+        vintage: searchVintage.trim() || undefined,
       });
 
       if (result) {
         setSelectedWine(result);
         setWineSource('serper');
-        setVintage(result.vintage || '');
+        setVintage(result.vintage || searchVintage || '');
         setGrapeVariety(result.grapes || []);
         setCurrentStep('preview');
       } else {
@@ -187,6 +191,8 @@ export default function AddWineModal({
 
   const resetForm = () => {
     setWineName('');
+    setWinery('');
+    setSearchVintage('');
     setSuggestions([]);
     setShowSuggestions(false);
     setCurrentStep('search');
@@ -221,6 +227,10 @@ export default function AddWineModal({
             <SearchStep
               wineName={wineName}
               setWineName={setWineName}
+              winery={winery}
+              setWinery={setWinery}
+              vintage={searchVintage}
+              setVintage={setSearchVintage}
               suggestions={suggestions}
               showSuggestions={showSuggestions}
               setShowSuggestions={setShowSuggestions}
@@ -287,6 +297,10 @@ export default function AddWineModal({
 function SearchStep({
   wineName,
   setWineName,
+  winery,
+  setWinery,
+  vintage,
+  setVintage,
   suggestions,
   showSuggestions,
   setShowSuggestions,
@@ -301,47 +315,95 @@ function SearchStep({
   return (
     <div className="search-step">
       <p className="step-description">
-        {t('wine_discovery.search_db') || 'Search our wine database'}
+        {t('wine_discovery.search_db') || 'Search wine database - enter details separately'}
       </p>
 
-      <div className="search-input-wrapper">
-        <input
-          type="text"
-          value={wineName}
-          onChange={(e) => {
-            setWineName(e.target.value);
-            setError('');
-          }}
-          onFocus={() => wineName.trim().length >= 2 && setShowSuggestions(true)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              onSearchSerper();
-            }
-          }}
-          placeholder={t('wine_discovery.wine_name_placeholder') || 'Type wine name...'}
-          autoComplete="off"
-          disabled={searching}
-          className="search-input"
-        />
+      <div className="search-form">
+        <div className="form-group">
+          <label htmlFor="winery">Winery *</label>
+          <input
+            id="winery"
+            type="text"
+            value={winery}
+            onChange={(e) => {
+              setWinery(e.target.value);
+              setError('');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onSearchSerper();
+              }
+            }}
+            placeholder="e.g., Yarden, Barkan, Carmel"
+            disabled={searching}
+            className="search-input"
+          />
+        </div>
 
-        {showSuggestions && suggestions.length > 0 && (
-          <div className="suggestions-dropdown">
-            {suggestions.map((wine: DiscoveredWine) => (
-              <div
-                key={wine.id}
-                className="suggestion-item"
-                onClick={() => onSelectSuggestion(wine)}
-              >
-                <div className="suggestion-name">
-                  {wine.wineName}
-                  {wine.vintage && <span className="suggestion-vintage"> ({wine.vintage})</span>}
+        <div className="form-group">
+          <label htmlFor="wineName">Wine Name *</label>
+          <input
+            id="wineName"
+            type="text"
+            value={wineName}
+            onChange={(e) => {
+              setWineName(e.target.value);
+              setError('');
+            }}
+            onFocus={() => wineName.trim().length >= 2 && setShowSuggestions(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onSearchSerper();
+              }
+            }}
+            placeholder="e.g., Cabernet Sauvignon, Merlot"
+            autoComplete="off"
+            disabled={searching}
+            className="search-input"
+          />
+
+          {showSuggestions && suggestions.length > 0 && (
+            <div className="suggestions-dropdown">
+              {suggestions.map((wine: DiscoveredWine) => (
+                <div
+                  key={wine.id}
+                  className="suggestion-item"
+                  onClick={() => onSelectSuggestion(wine)}
+                >
+                  <div className="suggestion-name">
+                    {wine.wineName}
+                    {wine.vintage && <span className="suggestion-vintage"> ({wine.vintage})</span>}
+                  </div>
+                  <div className="suggestion-winery">{wine.winery}</div>
                 </div>
-                <div className="suggestion-winery">{wine.winery}</div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="vintage">Year (Optional)</label>
+          <input
+            id="vintage"
+            type="text"
+            value={vintage}
+            onChange={(e) => {
+              setVintage(e.target.value);
+              setError('');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                onSearchSerper();
+              }
+            }}
+            placeholder="e.g., 2020, 2019"
+            disabled={searching}
+            className="search-input"
+          />
+        </div>
       </div>
 
       {error && <div className="error-message">{error}</div>}
@@ -350,7 +412,7 @@ function SearchStep({
         <button
           className="btn btn-primary"
           onClick={onSearchSerper}
-          disabled={searching || !wineName.trim()}
+          disabled={searching || !wineName.trim() || !winery.trim()}
         >
           {searching ? (t('common.searching') || 'Searching...') : (t('common.search') || 'Search')}
         </button>
@@ -382,7 +444,7 @@ function PreviewStep({
   setSaveToDb,
   onAdd,
   onBack,
- t,
+  t,
 }: any) {
   const yearOptions = generateYearOptions();
   

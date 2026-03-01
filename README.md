@@ -72,7 +72,7 @@ my-vino-log/
 - **Spring Boot 3.x** with Java 21
 - **Spring Security** with JWT + HttpOnly Cookies
 - **Flyway** database migrations
-- **MySQL 8.0** (Dockerized)
+- **MySQL 8.0** (Local installation)
 - **Database Schema**: Users, Wines, FridgeLayouts, UserPreferences, WinePositions
 - **Configurable JWT**: 1-hour access token, 30-day refresh token
 
@@ -108,33 +108,29 @@ my-vino-log/
 | **State Management** | Zustand | 4.4.0 |
 | **Localization** | i18next | 23.7.0 |
 | **HTTP Client** | Axios | 1.6.0 |
-| **Containerization** | Docker & Compose | Latest |
+| **Build Tool (Backend)** | Maven | 3.9+ |
 
 ## 📦 Prerequisites
 
-- **Docker** & **Docker Compose** (for containerized setup)
-- **Node.js** 18+ (for local frontend development)
-- **Maven** 3.9+ (for local backend development)
-- **Java 21 JDK** (for local backend development)
+- **Node.js** 18+ (for frontend development)
+- **Maven** 3.9+ (for backend development)
+- **Java 21 JDK** (for backend development)
+- **MySQL 8.0** (local installation)
 
 ## 🏃 Quick Start
 
-### Option 1: Docker Compose (Recommended)
+### Setup MySQL Database
 
 ```bash
-# Clone/navigate to project
-cd my-vino-log
+# Start MySQL service (macOS)
+brew services start mysql
 
-# Build and start all services
-docker-compose up -d
-
-# Services will be available at:
-# Frontend: http://localhost:5173
-# Backend: http://localhost:8080
-# Database: localhost:3306
+# Create database
+mysql -u root -p
+CREATE DATABASE vino_log;
 ```
 
-### Option 2: Local Development
+### Local Development
 
 #### Backend Setup
 
@@ -174,14 +170,15 @@ npm run preview
 
 ### Backend Environment Variables
 
-Create a `.env` file in the project root or configure in `docker-compose.yml`:
+Create a `.env` file in the project root:
 
 ```env
 JWT_SECRET=your-256-bit-secret-key-here
-SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/vindex_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-SPRING_DATASOURCE_USERNAME=vindex_user
-SPRING_DATASOURCE_PASSWORD=vindex_password
-OPENAI_API_KEY=your-openai-api-key-for-phase-2
+SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/vino_log?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true"
+SPRING_DATASOURCE_USERNAME=root
+SPRING_DATASOURCE_PASSWORD=12345678
+SERPER_API_KEY=your-serper-api-key
+SPRING_AI_GOOGLE_GENAI_API_KEY=your-google-genai-key
 ```
 
 ### Frontend Configuration
@@ -253,20 +250,21 @@ npm run test
 - API versioning
 - Audit logging
 
-## 🚢 Deployment
+## 🚢 Running the Application
 
-### Docker Deployment
+### Start Backend
 
 ```bash
-# Build Docker images
-docker-compose build
+cd backend
+set -a && source ../.env && set +a
+mvn spring-boot:run
+```
 
-# Deploy
-docker-compose up -d
+### Start Frontend
 
-# View logs
-docker-compose logs -f backend
-docker-compose logs -f frontend
+```bash
+cd frontend
+npm run dev
 ```
 
 ### Production Considerations
