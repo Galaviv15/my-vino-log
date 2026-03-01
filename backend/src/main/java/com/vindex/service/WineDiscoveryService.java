@@ -74,21 +74,91 @@ public class WineDiscoveryService {
                 .findByWineryAndWineNameAndVintage(winery, wineName, vintage);
 
         if (existingWine.isPresent()) {
-            log.info("Wine found in local cache: {}", existingWine.get().getId());
-            return existingWine.get();
+            GlobalWine cachedWine = existingWine.get();
+            log.info("Wine found in local cache: {}", cachedWine.getId());
+            
+            // If cached wine has no grapes, re-extract with enhanced grape detection
+            if (cachedWine.getGrapes() == null || cachedWine.getGrapes().isEmpty()) {
+                log.info("Cached wine has no grapes, re-extracting with enhanced grape detection: {}", cachedWine.getId());
+                
+                // Use enhanced multi-query grape extraction
+                List<String> extractedGrapes = performEnhancedGrapeSearch(winery, wineName, vintage);
+                
+                if (extractedGrapes != null && !extractedGrapes.isEmpty()) {
+                    cachedWine.setGrapes(extractedGrapes);
+                    GlobalWine updatedWine = globalWineRepository.save(cachedWine);
+                    log.info("Updated cached wine with {} grape varieties: {}", extractedGrapes.size(), extractedGrapes);
+                    return updatedWine;
+                } else {
+                    // Fallback to regular search and extraction
+                    String searchQuery = buildSearchQuery(winery, wineName, vintage);
+                    String searchResults = performSerperSearch(searchQuery);
+                    
+                    if (searchResults != null && !searchResults.isEmpty()) {
+                        GlobalWine extractedData = extractWineDetailsManually(winery, wineName, vintage, searchResults);
+                        
+                        if (extractedData != null && extractedData.getGrapes() != null && !extractedData.getGrapes().isEmpty()) {
+                            cachedWine.setGrapes(extractedData.getGrapes());
+                            if (extractedData.getAlcoholContent() != null) {
+                                cachedWine.setAlcoholContent(extractedData.getAlcoholContent());
+                            }
+                            if (extractedData.getRegion() != null && !extractedData.getRegion().equals("Unknown")) {
+                                cachedWine.setRegion(extractedData.getRegion());
+                            }
+                            if (extractedData.getType() != null) {
+                                cachedWine.setType(extractedData.getType());
+                            }
+                            
+                            // Update image if new one found and old one is placeholder/missing
+                            if (extractedData.getImageUrl() != null && !extractedData.getImageUrl().isEmpty() &&
+                                (cachedWine.getImageUrl() == null || cachedWine.getImageUrl().contains("placeholder"))) {
+                                cachedWine.setImageUrl(extractedData.getImageUrl());
+                            }
+                            
+                            // Save the updated existing wine (this should be an UPDATE, not INSERT)
+                            GlobalWine updatedWine = globalWineRepository.save(cachedWine);
+                            log.info("Updated cached wine with grapes: {} varieties found", updatedWine.getGrapes().size());
+                            return updatedWine;
+                        }
+                    }
+                }
+            }
+            
+            return cachedWine;
         }
 
-        // Step 2: Search online via Serper
-        String searchQuery = buildSearchQuery(winery, wineName, vintage);
-        String searchResults = performSerperSearch(searchQuery);
-
-        if (searchResults == null || searchResults.isEmpty()) {
-            log.warn("No search results found for: {} {}", winery, wineName);
-            return null;
+        // Step 2: Search online via Serper with enhanced grape detection
+        GlobalWine discoveredWine = null;
+        
+        // Try enhanced grape search first
+        List<String> grapes = performEnhancedGrapeSearch(winery, wineName, vintage);
+        if (grapes != null && !grapes.isEmpty()) {
+            log.info("Enhanced grape search found {} varieties: {}", grapes.size(), grapes);
+            
+            // Get basic wine info from regular search
+            String searchQuery = buildSearchQuery(winery, wineName, vintage);
+            String searchResults = performSerperSearch(searchQuery);
+            
+            if (searchResults != null && !searchResults.isEmpty()) {
+                discoveredWine = extractWineDetailsWithAI(winery, wineName, vintage, searchResults);
+                if (discoveredWine != null) {
+                    discoveredWine.setGrapes(grapes); // Use enhanced grape data
+                }
+            }
         }
+        
+        // Fallback to regular search if enhanced method didn't work
+        if (discoveredWine == null) {
+            String searchQuery = buildSearchQuery(winery, wineName, vintage);
+            String searchResults = performSerperSearch(searchQuery);
 
-        // Step 3: Extract details directly from Serper (Gemini disabled)
-        GlobalWine discoveredWine = extractWineDetailsWithAI(winery, wineName, vintage, searchResults);
+            if (searchResults == null || searchResults.isEmpty()) {
+                log.warn("No search results found for: {} {}", winery, wineName);
+                return null;
+            }
+
+            discoveredWine = extractWineDetailsWithAI(winery, wineName, vintage, searchResults);
+        }
 
         if (discoveredWine == null) {
             log.warn("Failed to extract wine details from Serper results");
@@ -813,41 +883,218 @@ public class WineDiscoveryService {
     }
     
     /**
-     * Extract grape varieties from snippet text
+     * Enhanced grape variety extraction with multiple targeted searches
      */
-    private List<String> extractGrapesFromSnippet(String snippet) {
+    private List<String> performEnhancedGrapeSearch(String winery, String wineName, String vintage) {
+        log.info("🍇 Starting enhanced grape search for: {} {} {}", winery, wineName, vintage);
+        
+        // Multiple targeted search queries for grape information
+        String[] grapeSearchQueries = {
+            String.format("%s %s %s wine grape variety composition", winery, wineName, vintage != null ? vintage : "").trim(),
+            String.format("%s %s %s blend composition varietal", winery, wineName, vintage != null ? vintage : "").trim(),
+            String.format("%s %s wine grapes used varieties", winery, wineName),
+            String.format("%s %s %s technical sheet wine specs", winery, wineName, vintage != null ? vintage : "").trim(),
+            String.format("%s %s wine tasting notes grape varieties", winery, wineName)
+        };
+        
+        List<String> allFoundGrapes = new ArrayList<>();
+        
+        for (int i = 0; i < grapeSearchQueries.length; i++) {
+            try {
+                log.debug("🔍 Grape search query {}: {}", i + 1, grapeSearchQueries[i]);
+                String searchResults = performSerperSearch(grapeSearchQueries[i]);
+                
+                if (searchResults != null && !searchResults.isEmpty()) {
+                    List<String> grapesFromQuery = extractGrapesFromSearchResults(searchResults);
+                    if (!grapesFromQuery.isEmpty()) {
+                        log.info("Find found {} grapes from query {}: {}", grapesFromQuery.size(), i + 1, grapesFromQuery);
+                        allFoundGrapes.addAll(grapesFromQuery);
+                        
+                        // If we found good results, we can stop early
+                        if (grapesFromQuery.size() >= 2) {
+                            log.info("✅ Found sufficient grape data, stopping search");
+                            break;
+                        }
+                    }
+                }
+                
+                // Small delay between requests
+                Thread.sleep(500);
+                
+            } catch (Exception e) {
+                log.warn("Error in grape search query {}: {}", i + 1, e.getMessage());
+            }
+        }
+        
+        // Remove duplicates and return best results
+        List<String> uniqueGrapes = removeDuplicateGrapes(allFoundGrapes);
+        log.info("🍇 Enhanced grape search complete: found {} unique varieties: {}", uniqueGrapes.size(), uniqueGrapes);
+        
+        return uniqueGrapes;
+    }
+    
+    /**
+     * Extract grapes from Serper search results with enhanced pattern matching
+     */
+    private List<String> extractGrapesFromSearchResults(String searchResults) {
+        List<String> grapes = new ArrayList<>();
+        
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> serperResponse = objectMapper.readValue(searchResults, Map.class);
+            
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> organicResults = (List<Map<String, Object>>) serperResponse.get("organic");
+            
+            if (organicResults != null) {
+                for (Map<String, Object> result : organicResults) {
+                    String title = (String) result.getOrDefault("title", "");
+                    String snippet = (String) result.getOrDefault("snippet", "");
+                    
+                    // Extract from both title and snippet
+                    grapes.addAll(extractGrapesFromText(title + " " + snippet));
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Error parsing search results for grapes: {}", e.getMessage());
+        }
+        
+        return grapes;
+    }
+    
+    /**
+     * Enhanced grape extraction from text with pattern matching and percentages
+     */
+    private List<String> extractGrapesFromText(String text) {
         List<String> grapes = new ArrayList<>();
         java.util.Set<String> uniqueGrapes = new java.util.LinkedHashSet<>();
         
-        if (snippet == null || snippet.isEmpty()) {
+        if (text == null || text.isEmpty()) {
             return grapes;
         }
         
-        // Pattern: "Cabernet Sauvignon 38%, Petit Verdot 33%, Merlot 17%, Cabernet Franc 12%"
-        // We want to extract the grape names
-        String lowerSnippet = snippet.toLowerCase();
+        String lowerText = text.toLowerCase();
+        
+        // Enhanced grape varieties list
         String[] commonGrapes = {
-            "cabernet sauvignon", "cabernet franc", "petit verdot", "petite verdot", "merlot", "pinot noir",
-            "syrah", "grenache", "carmenere", "tempranillo", "chardonnay", "sauvignon blanc",
-            "riesling", "pinot grigio", "gewurztraminer"
+            // Red varieties
+            "cabernet sauvignon", "merlot", "tempranillo", "syrah", "shiraz", "grenache", "garnacha", 
+            "pinot noir", "sangiovese", "malbec", "cabernet franc", "nebbiolo", "zinfandel", "primitivo",
+            "montepulciano", "barbera", "gamay", "carménère", "carmenere", "petit verdot", "petite verdot",
+            "mourvèdre", "mourvedre", "petite sirah", "nero d'avola", "pinotage", "mencía", "mencia",
+            "touriga nacional", "bobal", "corvina", "carignan", "alicante bouschet", "agiorgitiko",
+            "xinomavro", "dolcetto", "negroamaro", "côtes du rhône", "cotes du rhone",
+            
+            // White varieties
+            "chardonnay", "sauvignon blanc", "airén", "airen", "pinot grigio", "pinot gris", "riesling",
+            "trebbiano", "ugni blanc", "chenin blanc", "sémillon", "semillon", "viognier", "moscato",
+            "muscat", "gewürztraminer", "gewurztraminer", "albariño", "albarino", "grüner veltliner",
+            "gruner veltliner", "pinot blanc", "vermentino", "torrontés", "torrontes", "colombard",
+            "macabeo", "viura", "garganega", "cortese", "fiano", "assyrtiko", "marsanne", "roussanne",
+            "godello", "fernão pires", "fernao pires", "glera", "catarratto", "verdelho", "falanghina"
         };
         
-        for (String grape : commonGrapes) {
-            if (lowerSnippet.contains(grape)) {
-                // Capitalize properly
-                String[] parts = grape.split(" ");
-                StringBuilder capitalized = new StringBuilder();
-                for (String part : parts) {
-                    if (capitalized.length() > 0) capitalized.append(" ");
-                    capitalized.append(part.substring(0, 1).toUpperCase()).append(part.substring(1));
+        // Pattern 1: Look for grape names with percentages (e.g., "Cabernet Sauvignon 45%")
+        Pattern percentagePattern = Pattern.compile("([a-záéíóúüñç\\s]+)\\s+(\\d+)%", Pattern.CASE_INSENSITIVE);
+        Matcher percentageMatcher = percentagePattern.matcher(text);
+        
+        while (percentageMatcher.find()) {
+            String potentialGrape = percentageMatcher.group(1).trim().toLowerCase();
+            for (String grape : commonGrapes) {
+                if (potentialGrape.contains(grape) || grape.contains(potentialGrape)) {
+                    uniqueGrapes.add(capitalizeGrapeName(grape));
+                    log.debug("Found grape with percentage: {} ({}%)", capitalizeGrapeName(grape), percentageMatcher.group(2));
                 }
-                uniqueGrapes.add(capitalized.toString());
+            }
+        }
+        
+        // Pattern 2: Look for blend descriptions (e.g., "blend of Cabernet Sauvignon and Merlot")
+        Pattern blendPattern = Pattern.compile("blend\\s+of\\s+([^.;!?]+)", Pattern.CASE_INSENSITIVE);
+        Matcher blendMatcher = blendPattern.matcher(text);
+        
+        while (blendMatcher.find()) {
+            String blendDescription = blendMatcher.group(1).toLowerCase();
+            for (String grape : commonGrapes) {
+                if (blendDescription.contains(grape)) {
+                    uniqueGrapes.add(capitalizeGrapeName(grape));
+                    log.debug("Found grape in blend description: {}", capitalizeGrapeName(grape));
+                }
+            }
+        }
+        
+        // Pattern 3: Standard grape name matching
+        for (String grape : commonGrapes) {
+            if (lowerText.contains(grape)) {
+                uniqueGrapes.add(capitalizeGrapeName(grape));
+                log.debug("Found grape by name match: {}", capitalizeGrapeName(grape));
             }
         }
         
         grapes.addAll(uniqueGrapes);
-        log.debug("Extracted grapes from snippet: {}", grapes);
         return grapes;
+    }
+    
+    /**
+     * Remove duplicate grapes and normalize names
+     */
+    private List<String> removeDuplicateGrapes(List<String> grapes) {
+        java.util.Set<String> normalizedGrapes = new java.util.LinkedHashSet<>();
+        
+        for (String grape : grapes) {
+            String normalized = normalizeGrapeName(grape);
+            normalizedGrapes.add(normalized);
+        }
+        
+        return new ArrayList<>(normalizedGrapes);
+    }
+    
+    /**
+     * Normalize grape names (handle variations)
+     */
+    private String normalizeGrapeName(String grape) {
+        if (grape == null) return null;
+        
+        String normalized = grape.trim();
+        
+        // Handle common variations
+        normalized = normalized.replaceAll("(?i)petite\\s+verdot", "Petit Verdot");
+        normalized = normalized.replaceAll("(?i)carmenere", "Carménère");
+        normalized = normalized.replaceAll("(?i)mourvedre", "Mourvèdre");
+        normalized = normalized.replaceAll("(?i)gewurztraminer", "Gewürztraminer");
+        
+        return normalized;
+    }
+    
+    /**
+     * Capitalize grape names properly
+     */
+    private String capitalizeGrapeName(String grape) {
+        if (grape == null || grape.isEmpty()) {
+            return grape;
+        }
+        
+        String[] words = grape.trim().split("\\s+");
+        StringBuilder capitalized = new StringBuilder();
+        
+        for (String word : words) {
+            if (capitalized.length() > 0) {
+                capitalized.append(" ");
+            }
+            
+            if (word.length() > 0) {
+                capitalized.append(word.substring(0, 1).toUpperCase())
+                          .append(word.substring(1).toLowerCase());
+            }
+        }
+        
+        return capitalized.toString();
+    }
+    
+    /**
+     * Extract grape varieties from snippet text (legacy method for compatibility)
+     */
+    private List<String> extractGrapesFromSnippet(String snippet) {
+        return extractGrapesFromText(snippet);
     }
     
     /**
