@@ -237,7 +237,7 @@ public class WineDiscoveryService {
     */
 
     /**
-     * Extract wine details manually from Serper search results (fallback)
+     * Extract wine details manually from Serper search results using multi-source validation (top 3 results)
      */
     private GlobalWine extractWineDetailsManually(String winery, String wineName, String vintage, String searchResults) {
         try {
@@ -252,51 +252,35 @@ public class WineDiscoveryService {
                 return null;
             }
             
-            // Get the first result (highest relevance)
-            Map<String, Object> topResult = organicResults.get(0);
-            String title = (String) topResult.getOrDefault("title", "");
-            String snippet = (String) topResult.getOrDefault("snippet", "");
+            log.info("🔍 Processing {} search results for multi-source extraction", Math.min(maxSearchResults, organicResults.size()));
             
-            // Extract correctly formatted names from search results
-            String extractedWinery = extractWineryFromTitle(title, winery);
-            String extractedWineName = extractWineNameFromTitle(title, wineName);
+            // Extract data from multiple sources (top 3 results)
+            List<WineCandidate> candidates = new ArrayList<>();
             
-            log.info("Name extraction - Original: {} {}, Extracted: {} {}", 
-                    winery, wineName, extractedWinery, extractedWineName);
-            
-            GlobalWine wine = new GlobalWine();
-            wine.setWinery(extractedWinery);
-            wine.setWineName(extractedWineName);
-            wine.setVintage(vintage != null ? vintage : "NV");
-            wine.setSource("SerperAPI");
-            wine.setAiValidated(false);
-            
-            // Extract grapes from snippet
-            log.debug("Snippet for grape extraction: {}", snippet);
-            
-            List<String> grapes = extractGrapesFromSnippet(snippet);
-            wine.setGrapes(grapes);
-            
-            // Extract alcohol content if available in snippet
-            Double alcohol = extractAlcoholFromSnippet(snippet);
-            wine.setAlcoholContent(alcohol);
-            
-            // Extract region from snippet or title
-            String region = extractRegionFromSnippet(snippet);
-            if (region == null || region.isEmpty()) {
-                region = extractRegionFromTitle((String) topResult.getOrDefault("title", ""));
+            for (int i = 0; i < Math.min(maxSearchResults, organicResults.size()); i++) {
+                Map<String, Object> result = organicResults.get(i);
+                String title = (String) result.getOrDefault("title", "");
+                String snippet = (String) result.getOrDefault("snippet", "");
+                String url = (String) result.getOrDefault("link", "");
+                
+                log.info("📄 Source {}: {} | URL: {}", i + 1, title, url);
+                
+                WineCandidate candidate = extractFromSingleSource(result, winery, wineName, vintage, i + 1);
+                if (candidate != null) {
+                    candidates.add(candidate);
+                }
             }
-            wine.setRegion(region);
             
-            // Extract wine type (RED, WHITE, ROSÉ) from snippet
-            String wineType = extractWineTypeFromSnippet(snippet);
-            wine.setType(wineType);
+            if (candidates.isEmpty()) {
+                log.warn("No valid wine data extracted from any source");
+                return null;
+            }
             
-            // Set country (default to Israel for Israeli wines like Yatir)
-            wine.setCountry("Israel");
+            // Cross-validate and choose best data from all sources
+            GlobalWine wine = buildFinalWineFromCandidates(candidates, winery, wineName, vintage);
             
-            log.info("✅ Successfully extracted wine details from Serper (manual parsing): {} {} {} - Grapes: {}", 
-                    wine.getWinery(), wine.getWineName(), wine.getVintage(), wine.getGrapes());
+            log.info("✅ Multi-source extraction complete: {} {} {} - Sources used: {}", 
+                    wine.getWinery(), wine.getWineName(), wine.getVintage(), candidates.size());
             
             return wine;
             
@@ -307,36 +291,316 @@ public class WineDiscoveryService {
     }
     
     /**
-     * Extract winery name from search result title
+     * Extract wine data from a single Serper result
+     */
+    private WineCandidate extractFromSingleSource(Map<String, Object> result, String originalWinery, String originalWineName, String vintage, int sourceIndex) {
+        try {
+            String title = (String) result.getOrDefault("title", "");
+            String snippet = (String) result.getOrDefault("snippet", "");
+            String url = (String) result.getOrDefault("link", "");
+            
+            WineCandidate candidate = new WineCandidate();
+            candidate.sourceIndex = sourceIndex;
+            candidate.sourceUrl = url;
+            candidate.title = title;
+            candidate.snippet = snippet;
+            
+            // Extract names with fallback corrections
+            try {
+                candidate.winery = extractWineryFromTitle(title, originalWinery);
+                log.debug("Source {}: Winery '{}' -> '{}'", sourceIndex, originalWinery, candidate.winery);
+            } catch (Exception e) {
+                candidate.winery = capitalizeWineName(originalWinery);
+                log.debug("Source {}: Winery extraction failed, using fallback: '{}'", sourceIndex, candidate.winery);
+            }
+            
+            try {
+                candidate.wineName = extractWineNameFromTitle(title, originalWineName);
+                log.debug("Source {}: Wine name '{}' -> '{}'", sourceIndex, originalWineName, candidate.wineName);
+            } catch (Exception e) {
+                candidate.wineName = capitalizeWineName(originalWineName);
+                log.debug("Source {}: Wine name extraction failed, using fallback: '{}'", sourceIndex, candidate.wineName);
+            }
+            
+            // Extract additional data from snippet
+            candidate.grapes = extractGrapesFromSnippet(snippet);
+            candidate.alcohol = extractAlcoholFromSnippet(snippet);
+            candidate.region = extractRegionFromSnippet(snippet);
+            candidate.wineType = extractWineTypeFromSnippet(snippet);
+            
+            // Calculate quality score for this candidate
+            candidate.qualityScore = calculateCandidateQuality(candidate, originalWinery, originalWineName);
+            
+            log.debug("Source {}: Quality score = {}, Data: {} | {} | Type: {} | Grapes: {} | Alcohol: {}%", 
+                    sourceIndex, candidate.qualityScore, candidate.winery, candidate.wineName, 
+                    candidate.wineType, candidate.grapes, candidate.alcohol);
+            
+            return candidate;
+            
+        } catch (Exception e) {
+            log.warn("Failed to extract from source {}: {}", sourceIndex, e.getMessage());
+            return null;
+        }
+    }
+    
+    /**
+     * Build final wine object by cross-validating data from multiple candidates
+     */
+    private GlobalWine buildFinalWineFromCandidates(List<WineCandidate> candidates, String originalWinery, String originalWineName, String vintage) {
+        GlobalWine wine = new GlobalWine();
+        
+        // Choose best winery name (highest quality score with valid winery)
+        WineCandidate bestWineryCandidate = candidates.stream()
+                .filter(c -> c.winery != null && !c.winery.trim().isEmpty())
+                .max((c1, c2) -> Integer.compare(c1.qualityScore, c2.qualityScore))
+                .orElse(candidates.get(0));
+        
+        wine.setWinery(bestWineryCandidate.winery);
+        log.info("🏆 Best winery from source {}: '{}'", bestWineryCandidate.sourceIndex, wine.getWinery());
+        
+        // Choose best wine name (cross-validate for spelling corrections)
+        String bestWineName = chooseBestWineName(candidates, originalWineName);
+        wine.setWineName(bestWineName);
+        log.info("🏆 Best wine name: '{}'", bestWineName);
+        
+        // Set basic properties
+        wine.setVintage(vintage != null ? vintage : "NV");
+        wine.setSource("SerperAPI");
+        wine.setAiValidated(false);
+        wine.setCountry("Israel"); // Default for Israeli wines
+        
+        // Choose best additional data from candidates
+        wine.setGrapes(chooseBestGrapes(candidates));
+        wine.setAlcoholContent(chooseBestAlcohol(candidates));
+        wine.setRegion(chooseBestRegion(candidates));
+        wine.setType(chooseBestWineType(candidates));
+        
+        return wine;
+    }
+    
+    /**
+     * Choose the best wine name from multiple candidates using cross-validation
+     */
+    private String chooseBestWineName(List<WineCandidate> candidates, String originalWineName) {
+        Map<String, Integer> nameFrequency = new HashMap<>();
+        Map<String, Integer> nameQuality = new HashMap<>();
+        
+        // Count frequency and track quality scores
+        for (WineCandidate candidate : candidates) {
+            if (candidate.wineName != null && !candidate.wineName.trim().isEmpty()) {
+                String name = candidate.wineName.trim();
+                nameFrequency.put(name, nameFrequency.getOrDefault(name, 0) + 1);
+                nameQuality.put(name, Math.max(nameQuality.getOrDefault(name, 0), candidate.qualityScore));
+            }
+        }
+        
+        if (nameFrequency.isEmpty()) {
+            return capitalizeWineName(originalWineName);
+        }
+        
+        // Find most frequent name with highest quality
+        String bestName = nameFrequency.entrySet().stream()
+                .max((e1, e2) -> {
+                    // First compare by frequency, then by quality
+                    int freqCompare = Integer.compare(e1.getValue(), e2.getValue());
+                    if (freqCompare != 0) return freqCompare;
+                    return Integer.compare(nameQuality.get(e1.getKey()), nameQuality.get(e2.getKey()));
+                })
+                .map(Map.Entry::getKey)
+                .orElse(capitalizeWineName(originalWineName));
+        
+        log.info("🔍 Wine name analysis: {} candidates, best: '{}' (frequency: {}, quality: {})", 
+                nameFrequency.size(), bestName, nameFrequency.get(bestName), nameQuality.get(bestName));
+        
+        return bestName;
+    }
+    
+    /**
+     * Calculate quality score for a wine candidate
+     */
+    private int calculateCandidateQuality(WineCandidate candidate, String originalWinery, String originalWineName) {
+        int score = 0;
+        
+        // Base score for having data
+        if (candidate.winery != null && !candidate.winery.trim().isEmpty()) score += 10;
+        if (candidate.wineName != null && !candidate.wineName.trim().isEmpty()) score += 10;
+        
+        // Bonus for matching or similar names
+        if (candidate.winery != null && containsIgnoreCase(candidate.winery, originalWinery)) score += 20;
+        if (candidate.wineName != null && containsIgnoreCase(candidate.wineName, originalWineName)) score += 20;
+        
+        // Bonus for additional data
+        if (candidate.grapes != null && !candidate.grapes.isEmpty()) score += 5;
+        if (candidate.alcohol != null) score += 5;
+        if (candidate.region != null && !candidate.region.trim().isEmpty()) score += 5;
+        if (candidate.wineType != null && !candidate.wineType.trim().isEmpty()) score += 5;
+        
+        // Bonus for wine-specific URLs (e.g., wine shops, wine databases)
+        if (candidate.sourceUrl != null) {
+            String url = candidate.sourceUrl.toLowerCase();
+            if (url.contains("wine") || url.contains("vivino") || url.contains("cellar") || url.contains("bottle")) {
+                score += 15;
+            }
+        }
+        
+        return score;
+    }
+    
+    // Helper methods for choosing best data from candidates
+    private List<String> chooseBestGrapes(List<WineCandidate> candidates) {
+        return candidates.stream()
+                .filter(c -> c.grapes != null && !c.grapes.isEmpty())
+                .findFirst()
+                .map(c -> c.grapes)
+                .orElse(new ArrayList<>());
+    }
+    
+    private Double chooseBestAlcohol(List<WineCandidate> candidates) {
+        return candidates.stream()
+                .filter(c -> c.alcohol != null)
+                .findFirst()
+                .map(c -> c.alcohol)
+                .orElse(null);
+    }
+    
+    private String chooseBestRegion(List<WineCandidate> candidates) {
+        return candidates.stream()
+                .filter(c -> c.region != null && !c.region.trim().isEmpty())
+                .findFirst()
+                .map(c -> c.region)
+                .orElse("Unknown");
+    }
+    
+    private String chooseBestWineType(List<WineCandidate> candidates) {
+        return candidates.stream()
+                .filter(c -> c.wineType != null && !c.wineType.trim().isEmpty())
+                .findFirst()
+                .map(c -> c.wineType)
+                .orElse("RED"); // Default for Israeli wines
+    }
+    
+    private boolean containsIgnoreCase(String text, String searchStr) {
+        if (text == null || searchStr == null) return false;
+        return text.toLowerCase().contains(searchStr.toLowerCase()) || 
+               searchStr.toLowerCase().contains(text.toLowerCase());
+    }
+    
+    /**
+     * Inner class to hold wine candidate data from each source
+     */
+    private static class WineCandidate {
+        int sourceIndex;
+        String sourceUrl;
+        String title;
+        String snippet;
+        String winery;
+        String wineName;
+        List<String> grapes;
+        Double alcohol;
+        String region;
+        String wineType;
+        int qualityScore;
+    }
+    
+    /**
+     * Calculate Levenshtein distance for fuzzy string matching
+     */
+    private int calculateLevenshteinDistance(String s1, String s2) {
+        if (s1 == null || s2 == null) return Integer.MAX_VALUE;
+        
+        s1 = s1.toLowerCase();
+        s2 = s2.toLowerCase();
+        
+        int[][] dp = new int[s1.length() + 1][s2.length() + 1];
+        
+        for (int i = 0; i <= s1.length(); i++) {
+            for (int j = 0; j <= s2.length(); j++) {
+                if (i == 0) {
+                    dp[i][j] = j;
+                } else if (j == 0) {
+                    dp[i][j] = i;
+                } else {
+                    dp[i][j] = Math.min(Math.min(
+                        dp[i - 1][j] + 1,
+                        dp[i][j - 1] + 1),
+                        dp[i - 1][j - 1] + (s1.charAt(i - 1) == s2.charAt(j - 1) ? 0 : 1)
+                    );
+                }
+            }
+        }
+        
+        return dp[s1.length()][s2.length()];
+    }
+    
+    /**
+     * Find best matching word in title using fuzzy matching
+     */
+    private String findBestMatchInTitle(String title, String userInput, String[] knownPatterns) {
+        if (title == null || title.isEmpty() || userInput == null) {
+            return null;
+        }
+        
+        String[] titleWords = title.split("[\\\\s\\\\-,\\\\.]+");
+        String bestMatch = null;
+        int bestScore = Integer.MAX_VALUE;
+        int maxAllowedDistance = Math.max(1, userInput.length() / 3); // Allow up to 1/3 of characters to be different
+        
+        // First, check known patterns with fuzzy matching
+        for (String pattern : knownPatterns) {
+            int distance = calculateLevenshteinDistance(userInput, pattern);
+            if (distance <= maxAllowedDistance && distance < bestScore) {
+                // Find this pattern in the title with proper capitalization
+                for (String word : titleWords) {
+                    if (calculateLevenshteinDistance(pattern, word) <= 1) {
+                        bestMatch = word;
+                        bestScore = distance;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Then check all words in title for fuzzy matches
+        for (String word : titleWords) {
+            if (word.length() >= 2) { // Ignore very short words
+                int distance = calculateLevenshteinDistance(userInput, word);
+                if (distance <= maxAllowedDistance && distance < bestScore) {
+                    bestMatch = word;
+                    bestScore = distance;
+                }
+            }
+        }
+        
+        return bestMatch;
+    }
+    
+    /**
+     * Extract winery name from search result title using fuzzy matching
      */
     private String extractWineryFromTitle(String title, String userInputWinery) {
         if (title == null || title.isEmpty() || userInputWinery == null) {
-            return userInputWinery;
+            return capitalizeWineName(userInputWinery);
         }
         
         // Common winery patterns in titles
         String[] wineryPatterns = {
             "Gamla", "Yarden", "Carmel", "Barkan", "Recanati", "Margalit", "Yatir",
-            "Domaine de la", "Château", "Clos de", "Mas de", "Bodega", "Bodegas"
+            "Domaine de la", "Château", "Clos de", "Mas de", "Bodega", "Bodegas",
+            "Teperberg", "Galil", "Efrat", "Psagot", "Shvo", "Tulip", "Vitkin",
+            "Amphorae", "Pelter", "Sphera", "Tabor", "Tishbi", "Tzora"
         };
         
-        String lowerTitle = title.toLowerCase();
-        String lowerUserInput = userInputWinery.toLowerCase();
-        
-        // Look for exact winery match in title (case-insensitive)
-        for (String pattern : wineryPatterns) {
-            if (lowerTitle.contains(pattern.toLowerCase()) && 
-                lowerUserInput.contains(pattern.toLowerCase())) {
-                // Extract the properly capitalized version from title
-                int startIndex = lowerTitle.indexOf(pattern.toLowerCase());
-                if (startIndex >= 0) {
-                    return title.substring(startIndex, startIndex + pattern.length());
-                }
-            }
+        // Try fuzzy matching
+        String bestMatch = findBestMatchInTitle(title, userInputWinery, wineryPatterns);
+        if (bestMatch != null) {
+            return bestMatch;
         }
         
-        // Fallback: try to find user input winery in title with proper capitalization
+        // Fallback: look for exact substring match with proper capitalization
+        String lowerTitle = title.toLowerCase();
+        String lowerUserInput = userInputWinery.toLowerCase();
         String[] titleWords = title.split("\\s+");
+        
         for (String word : titleWords) {
             if (word.toLowerCase().contains(lowerUserInput) && word.length() >= lowerUserInput.length()) {
                 return word;
@@ -348,57 +612,179 @@ public class WineDiscoveryService {
     }
     
     /**
-     * Extract wine name from search result title
+     * Extract wine name from search result title using enhanced pattern matching
      */
     private String extractWineNameFromTitle(String title, String userInputWineName) {
         if (title == null || title.isEmpty() || userInputWineName == null) {
-            return userInputWineName;
+            return capitalizeWineName(userInputWineName);
         }
         
-        // Common wine type patterns
+        log.debug("🔍 Extracting wine name from title: '{}' | User input: '{}'", title, userInputWineName);
+        
+        // Step 1: Try structured title patterns first
+        String structuredMatch = extractFromStructuredTitle(title, userInputWineName);
+        if (structuredMatch != null) {
+            log.debug("✅ Found structured match: '{}'", structuredMatch);
+            return structuredMatch;
+        }
+        
+        // Step 2: Common wine type patterns
         String[] winePatterns = {
-            "Cabernet Sauvignon", "Cabernet Franc", "Pinot Noir", "Pinot Grigio",
+            "Cabernet Sauvignon", "Cabernet Franc", "Pinot Noir", "Pinot Grigio", "Pinot Gris",
             "Sauvignon Blanc", "Chardonnay", "Merlot", "Syrah", "Shiraz",
             "Riesling", "Gewürztraminer", "Petit Verdot", "Petite Verdot",
-            "Blend", "Reserve", "Rosé", "Rose", "Brut", "Sec"
+            "Petit Castel", "Grand Castel", "Blend", "Reserve", "Rosé", "Rose", "Brut", "Sec", 
+            "Moscato", "Muscat", "Tempranillo", "Sangiovese", "Barbera", "Nebbiolo", 
+            "Grenache", "Mourvedre", "Viognier", "Chenin Blanc", "Semillon", "Petit Sirah", "Zinfandel"
         };
         
-        String lowerTitle = title.toLowerCase();
-        String lowerUserInput = userInputWineName.toLowerCase();
-        
-        // Look for wine type patterns in title
-        for (String pattern : winePatterns) {
-            if (lowerTitle.contains(pattern.toLowerCase()) && 
-                lowerUserInput.contains(pattern.toLowerCase())) {
-                // Extract the properly capitalized version from title
-                int startIndex = lowerTitle.indexOf(pattern.toLowerCase());
-                if (startIndex >= 0) {
-                    return title.substring(startIndex, startIndex + pattern.length());
-                }
+        // Step 3: Handle multi-word wine names with fuzzy matching
+        String[] userWords = userInputWineName.trim().split("\\s+");
+        if (userWords.length > 1) {
+            // For multi-word wine names, try to find the best matching pattern
+            String bestMatch = findBestMatchInTitle(title, userInputWineName, winePatterns);
+            if (bestMatch != null) {
+                log.debug("✅ Found pattern match: '{}'", bestMatch);
+                return bestMatch;
             }
-        }
-        
-        // Fallback: try to find user input wine name in title with proper capitalization
-        String[] titleWords = title.split("\\s+");
-        StringBuilder extractedName = new StringBuilder();
-        String[] userWords = userInputWineName.toLowerCase().split("\\s+");
-        
-        for (String userWord : userWords) {
-            for (String titleWord : titleWords) {
-                if (titleWord.toLowerCase().equals(userWord)) {
+            
+            // Try to match individual words and reconstruct
+            StringBuilder extractedName = new StringBuilder();
+            for (String userWord : userWords) {
+                String wordMatch = findBestMatchInTitle(title, userWord, winePatterns);
+                if (wordMatch == null) {
+                    // Try direct word matching
+                    String[] titleWords = title.split("[\\\\s\\\\-,\\\\.]+");
+                    for (String titleWord : titleWords) {
+                        if (calculateLevenshteinDistance(userWord, titleWord) <= Math.max(1, userWord.length() / 3)) {
+                            wordMatch = titleWord;
+                            break;
+                        }
+                    }
+                }
+                
+                if (wordMatch != null) {
                     if (extractedName.length() > 0) extractedName.append(" ");
-                    extractedName.append(titleWord);
-                    break;
+                    extractedName.append(wordMatch);
+                } else {
+                    // Use capitalized user input for this word
+                    if (extractedName.length() > 0) extractedName.append(" ");
+                    extractedName.append(capitalizeWineName(userWord));
                 }
+            }
+            
+            String result = extractedName.toString();
+            if (!result.trim().isEmpty()) {
+                log.debug("✅ Reconstructed match: '{}'", result);
+                return result;
+            }
+        } else {
+            // Single word wine name
+            String bestMatch = findBestMatchInTitle(title, userInputWineName, winePatterns);
+            if (bestMatch != null) {
+                log.debug("✅ Single word match: '{}'", bestMatch);
+                return bestMatch;
             }
         }
         
-        if (extractedName.length() > 0) {
-            return extractedName.toString();
-        }
-        
+        log.debug("❌ No match found, using fallback: '{}'", capitalizeWineName(userInputWineName));
         // Final fallback: capitalize user input properly
         return capitalizeWineName(userInputWineName);
+    }
+    
+    /**
+     * Extract wine name from structured title patterns commonly used by wine retailers
+     */
+    private String extractFromStructuredTitle(String title, String userInputWineName) {
+        // Clean the title for better matching
+        String cleanTitle = title.replaceAll("\\|.*$", "").trim(); // Remove everything after |
+        cleanTitle = cleanTitle.replaceAll("\\s*-\\s*[^-]*\\.com.*$", "").trim(); // Remove shop names
+        
+        log.debug("🧹 Cleaned title: '{}'", cleanTitle);
+        
+        // Pattern 1: "Winery Wine Name Year" (e.g., "Castel Petit Castel 2023")
+        Pattern pattern1 = Pattern.compile("(?i)(?:domaine\\s+du\\s+)?castel\\s+(petit\\s+castel|grand\\s+castel)(?:\\s+\\d{4})?", Pattern.CASE_INSENSITIVE);
+        Matcher matcher1 = pattern1.matcher(cleanTitle);
+        if (matcher1.find()) {
+            String extracted = matcher1.group(1);
+            return capitalizeWineName(extracted);
+        }
+        
+        // Pattern 2: "Domaine Name : Wine Name Year" (e.g., "Domaine du Castel : Petit Castel 2023")
+        Pattern pattern2 = Pattern.compile("(?i).*:\\s*(petit\\s+castel|grand\\s+castel)(?:\\s+\\d{4})?", Pattern.CASE_INSENSITIVE);
+        Matcher matcher2 = pattern2.matcher(cleanTitle);
+        if (matcher2.find()) {
+            String extracted = matcher2.group(1);
+            return capitalizeWineName(extracted);
+        }
+        
+        // Pattern 3: Look for "Petit/Grand + Castel" anywhere in title
+        Pattern pattern3 = Pattern.compile("(?i)(petit|grand)\\s+(castel)", Pattern.CASE_INSENSITIVE);
+        Matcher matcher3 = pattern3.matcher(cleanTitle);
+        if (matcher3.find()) {
+            String extracted = matcher3.group(1) + " " + matcher3.group(2);
+            return capitalizeWineName(extracted);
+        }
+        
+        // Pattern 4: Generic wine name extraction for other wineries
+        // Look for potential wine names after winery names
+        String[] parts = cleanTitle.split("\\s+");
+        for (int i = 0; i < parts.length - 1; i++) {
+            String current = parts[i];
+            String next = parts[i + 1];
+            
+            // If we find a winery-like word followed by a potential wine name
+            if (isWineryWord(current) && isPotentialWineName(next)) {
+                StringBuilder wineName = new StringBuilder();
+                // Collect subsequent words that could be part of wine name
+                for (int j = i + 1; j < parts.length && j < i + 4; j++) { // Max 3 words for wine name
+                    if (isYear(parts[j])) break; // Stop at year
+                    if (j > i + 1) wineName.append(" ");
+                    wineName.append(parts[j]);
+                }
+                
+                String result = wineName.toString().trim();
+                if (!result.isEmpty() && containsIgnoreCase(result, userInputWineName)) {
+                    return capitalizeWineName(result);
+                }
+            }
+        }
+        
+        return null; // No structured pattern found
+    }
+    
+    /**
+     * Check if a word looks like a winery name
+     */
+    private boolean isWineryWord(String word) {
+        if (word == null || word.length() < 3) return false;
+        String lower = word.toLowerCase();
+        return lower.matches(".*(?:castel|domaine|château|winery|estate|cellars?|vineyard).*") || 
+               Character.isUpperCase(word.charAt(0));
+    }
+    
+    /**
+     * Check if a word could be part of a wine name
+     */
+    private boolean isPotentialWineName(String word) {
+        if (word == null || word.length() < 2) return false;
+        String lower = word.toLowerCase();
+        return !isYear(word) && 
+               !lower.matches(".*(?:\\.com|www\\.|http|cases|ship|free|bottle|ml|cl|%).*") &&
+               Character.isAlphabetic(word.charAt(0));
+    }
+    
+    /**
+     * Check if a string represents a year
+     */
+    private boolean isYear(String str) {
+        if (str == null || str.length() != 4) return false;
+        try {
+            int year = Integer.parseInt(str);
+            return year >= 1900 && year <= 2030;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
     
     /**
