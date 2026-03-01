@@ -254,16 +254,24 @@ public class WineDiscoveryService {
             
             // Get the first result (highest relevance)
             Map<String, Object> topResult = organicResults.get(0);
+            String title = (String) topResult.getOrDefault("title", "");
+            String snippet = (String) topResult.getOrDefault("snippet", "");
+            
+            // Extract correctly formatted names from search results
+            String extractedWinery = extractWineryFromTitle(title, winery);
+            String extractedWineName = extractWineNameFromTitle(title, wineName);
+            
+            log.info("Name extraction - Original: {} {}, Extracted: {} {}", 
+                    winery, wineName, extractedWinery, extractedWineName);
             
             GlobalWine wine = new GlobalWine();
-            wine.setWinery(winery);
-            wine.setWineName(wineName);
+            wine.setWinery(extractedWinery);
+            wine.setWineName(extractedWineName);
             wine.setVintage(vintage != null ? vintage : "NV");
             wine.setSource("SerperAPI");
             wine.setAiValidated(false);
             
             // Extract grapes from snippet
-            String snippet = (String) topResult.getOrDefault("snippet", "");
             log.debug("Snippet for grape extraction: {}", snippet);
             
             List<String> grapes = extractGrapesFromSnippet(snippet);
@@ -296,6 +304,126 @@ public class WineDiscoveryService {
             log.error("Error extracting wine details from Serper response", e);
             return null;
         }
+    }
+    
+    /**
+     * Extract winery name from search result title
+     */
+    private String extractWineryFromTitle(String title, String userInputWinery) {
+        if (title == null || title.isEmpty() || userInputWinery == null) {
+            return userInputWinery;
+        }
+        
+        // Common winery patterns in titles
+        String[] wineryPatterns = {
+            "Gamla", "Yarden", "Carmel", "Barkan", "Recanati", "Margalit", "Yatir",
+            "Domaine de la", "Château", "Clos de", "Mas de", "Bodega", "Bodegas"
+        };
+        
+        String lowerTitle = title.toLowerCase();
+        String lowerUserInput = userInputWinery.toLowerCase();
+        
+        // Look for exact winery match in title (case-insensitive)
+        for (String pattern : wineryPatterns) {
+            if (lowerTitle.contains(pattern.toLowerCase()) && 
+                lowerUserInput.contains(pattern.toLowerCase())) {
+                // Extract the properly capitalized version from title
+                int startIndex = lowerTitle.indexOf(pattern.toLowerCase());
+                if (startIndex >= 0) {
+                    return title.substring(startIndex, startIndex + pattern.length());
+                }
+            }
+        }
+        
+        // Fallback: try to find user input winery in title with proper capitalization
+        String[] titleWords = title.split("\\s+");
+        for (String word : titleWords) {
+            if (word.toLowerCase().contains(lowerUserInput) && word.length() >= lowerUserInput.length()) {
+                return word;
+            }
+        }
+        
+        // Final fallback: capitalize user input properly
+        return capitalizeWineName(userInputWinery);
+    }
+    
+    /**
+     * Extract wine name from search result title
+     */
+    private String extractWineNameFromTitle(String title, String userInputWineName) {
+        if (title == null || title.isEmpty() || userInputWineName == null) {
+            return userInputWineName;
+        }
+        
+        // Common wine type patterns
+        String[] winePatterns = {
+            "Cabernet Sauvignon", "Cabernet Franc", "Pinot Noir", "Pinot Grigio",
+            "Sauvignon Blanc", "Chardonnay", "Merlot", "Syrah", "Shiraz",
+            "Riesling", "Gewürztraminer", "Petit Verdot", "Petite Verdot",
+            "Blend", "Reserve", "Rosé", "Rose", "Brut", "Sec"
+        };
+        
+        String lowerTitle = title.toLowerCase();
+        String lowerUserInput = userInputWineName.toLowerCase();
+        
+        // Look for wine type patterns in title
+        for (String pattern : winePatterns) {
+            if (lowerTitle.contains(pattern.toLowerCase()) && 
+                lowerUserInput.contains(pattern.toLowerCase())) {
+                // Extract the properly capitalized version from title
+                int startIndex = lowerTitle.indexOf(pattern.toLowerCase());
+                if (startIndex >= 0) {
+                    return title.substring(startIndex, startIndex + pattern.length());
+                }
+            }
+        }
+        
+        // Fallback: try to find user input wine name in title with proper capitalization
+        String[] titleWords = title.split("\\s+");
+        StringBuilder extractedName = new StringBuilder();
+        String[] userWords = userInputWineName.toLowerCase().split("\\s+");
+        
+        for (String userWord : userWords) {
+            for (String titleWord : titleWords) {
+                if (titleWord.toLowerCase().equals(userWord)) {
+                    if (extractedName.length() > 0) extractedName.append(" ");
+                    extractedName.append(titleWord);
+                    break;
+                }
+            }
+        }
+        
+        if (extractedName.length() > 0) {
+            return extractedName.toString();
+        }
+        
+        // Final fallback: capitalize user input properly
+        return capitalizeWineName(userInputWineName);
+    }
+    
+    /**
+     * Capitalize wine/winery names properly
+     */
+    private String capitalizeWineName(String name) {
+        if (name == null || name.isEmpty()) {
+            return name;
+        }
+        
+        String[] words = name.trim().split("\\s+");
+        StringBuilder capitalized = new StringBuilder();
+        
+        for (String word : words) {
+            if (capitalized.length() > 0) {
+                capitalized.append(" ");
+            }
+            
+            if (word.length() > 0) {
+                capitalized.append(word.substring(0, 1).toUpperCase())
+                          .append(word.substring(1).toLowerCase());
+            }
+        }
+        
+        return capitalized.toString();
     }
     
     /**

@@ -177,6 +177,16 @@
   align-items: center;
 }
 
+.suggestion-continue {
+  border-top: 1px solid #e5e7eb;
+  background-color: #f8fafc;
+  font-style: italic;
+}
+
+.suggestion-continue:hover {
+  background-color: #e2e8f0;
+}
+
 /* Search Actions */
 .search-actions {
   display: flex;

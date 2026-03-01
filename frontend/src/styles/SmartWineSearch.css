@@ -212,6 +212,16 @@
   margin-top: 0.25rem;
 }
 
+.suggestion-continue {
+  border-top: 1px solid #e5e7eb;
+  background-color: #f8fafc;
+  font-style: italic;
+}
+
+.suggestion-continue:hover {
+  background-color: #e2e8f0;
+}
+
 /* Make form-group position relative to anchor suggestions-dropdown */
 .form-group {
   position: relative;

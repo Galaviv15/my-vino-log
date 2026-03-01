@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { discoverWine, DiscoveredWine, searchWinesByName } from '../services/wineDiscovery';
 import '../styles/SmartWineSearch.css';
@@ -19,6 +19,7 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
   const [showSearch, setShowSearch] = useState(false);
   const [suggestions, setSuggestions] = useState<DiscoveredWine[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionRef = useRef<HTMLDivElement>(null);
 
   // Autocomplete: Search database as user types wine name
   useEffect(() => {
@@ -43,11 +44,37 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
     return () => clearTimeout(timer);
   }, [wineName]);
 
+  // Handle outside clicks to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Handle ESC key to close suggestions
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
   const handleSelectSuggestion = (wine: DiscoveredWine) => {
     setWineName(wine.wineName);
     setWinery(wine.winery);
     setVintage(wine.vintage || '');
     setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  const handleContinueTyping = () => {
     setShowSuggestions(false);
   };
 
@@ -111,12 +138,7 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
 
           <div
             className="search-form"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSearch();
-              }
-            }}
+            onKeyDown={handleKeyDown}
           >
             <div className="form-group">
               <label htmlFor="winery">{t('wine_discovery.winery') || 'Winery'}*</label>
@@ -130,7 +152,7 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group" ref={suggestionRef}>
               <label htmlFor="wineName">{t('wine_discovery.wine_name') || 'Wine Name'}*</label>
               <input
                 id="wineName"
@@ -157,6 +179,12 @@ export default function SmartWineSearch({ onWineSelected, isLoading }: SmartWine
                       <div className="suggestion-winery">{wine.winery}</div>
                     </div>
                   ))}
+                  <div 
+                    className="suggestion-item suggestion-continue"
+                    onClick={handleContinueTyping}
+                  >
+                    <div className="suggestion-name">✏️ No match? Continue typing...</div>
+                  </div>
                 </div>
               )}
             </div>

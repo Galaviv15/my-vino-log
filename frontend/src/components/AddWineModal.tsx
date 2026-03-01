@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { discoverWine, DiscoveredWine, searchWinesByName } from '../services/wineDiscovery';
 import { getImageUrl } from '../services/imageUpload';
@@ -68,6 +68,7 @@ export default function AddWineModal({
   const [searchVintage, setSearchVintage] = useState('');
   const [suggestions, setSuggestions] = useState<DiscoveredWine[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionRef = useRef<HTMLDivElement>(null);
 
   // Flow state
   const [currentStep, setCurrentStep] = useState<ModalStep>('search');
@@ -108,6 +109,18 @@ export default function AddWineModal({
     return () => clearTimeout(timer);
   }, [wineName]);
 
+  // Handle outside clicks to close suggestions
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (suggestionRef.current && !suggestionRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleSelectSuggestion = (wine: DiscoveredWine) => {
     setSelectedWine(wine);
     setWineSource('database');
@@ -120,6 +133,10 @@ export default function AddWineModal({
     setSuggestions([]);
     setShowSuggestions(false);
     setError('');
+  };
+
+  const handleContinueTyping = () => {
+    setShowSuggestions(false);
   };
 
   const handleSearchSerper = async () => {
@@ -235,11 +252,13 @@ export default function AddWineModal({
               showSuggestions={showSuggestions}
               setShowSuggestions={setShowSuggestions}
               onSelectSuggestion={handleSelectSuggestion}
+              onContinueTyping={handleContinueTyping}
               onSearchSerper={handleSearchSerper}
               searching={searching}
               error={error}
               setError={setError}
               onManualEntry={handleManualEntry}
+              suggestionRef={suggestionRef}
               t={t}
             />
           )}
@@ -305,13 +324,25 @@ function SearchStep({
   showSuggestions,
   setShowSuggestions,
   onSelectSuggestion,
+  onContinueTyping,
   onSearchSerper,
   searching,
   error,
   setError,
   onManualEntry,
+  suggestionRef,
   t,
 }: any) {
+  // Handle ESC key to dismiss suggestions
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      onSearchSerper();
+    }
+  };
+
   return (
     <div className="search-step">
       <p className="step-description">
@@ -329,19 +360,14 @@ function SearchStep({
               setWinery(e.target.value);
               setError('');
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onSearchSerper();
-              }
-            }}
+            onKeyDown={handleKeyDown}
             placeholder="e.g., Yarden, Barkan, Carmel"
             disabled={searching}
             className="search-input"
           />
         </div>
 
-        <div className="form-group">
+        <div className="form-group" ref={suggestionRef}>
           <label htmlFor="wineName">Wine Name *</label>
           <input
             id="wineName"
@@ -352,12 +378,7 @@ function SearchStep({
               setError('');
             }}
             onFocus={() => wineName.trim().length >= 2 && setShowSuggestions(true)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onSearchSerper();
-              }
-            }}
+            onKeyDown={handleKeyDown}
             placeholder="e.g., Cabernet Sauvignon, Merlot"
             autoComplete="off"
             disabled={searching}
@@ -379,6 +400,12 @@ function SearchStep({
                   <div className="suggestion-winery">{wine.winery}</div>
                 </div>
               ))}
+              <div 
+                className="suggestion-item suggestion-continue"
+                onClick={onContinueTyping}
+              >
+                <div className="suggestion-name">✏️ No match? Continue typing...</div>
+              </div>
             </div>
           )}
         </div>
@@ -393,12 +420,7 @@ function SearchStep({
               setVintage(e.target.value);
               setError('');
             }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                onSearchSerper();
-              }
-            }}
+            onKeyDown={handleKeyDown}
             placeholder="e.g., 2020, 2019"
             disabled={searching}
             className="search-input"
