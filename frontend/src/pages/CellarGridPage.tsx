@@ -17,6 +17,7 @@ interface LocalWine {
   region?: string;
   country?: string;
   grapeVariety?: string;
+  alcoholPercentage?: number;
   location?: string;
   rowId?: number;
 }
@@ -489,8 +490,11 @@ export default function CellarGridPage() {
         location: details.location || 'FRIDGE',
         rowId: details.row || null,
         winery: discoveredWine.winery || null,
+        region: discoveredWine.region || null,
+        country: discoveredWine.country || null,
         grapeVariety: discoveredWine.grapes && discoveredWine.grapes.length > 0 ? discoveredWine.grapes.join(', ') : null,
-        imageUrl: '/wine-placeholder.svg',
+        alcoholPercentage: discoveredWine.alcoholContent || null,
+        imageUrl: discoveredWine.imageUrl || null,
       });
 
       // Upload image if provided

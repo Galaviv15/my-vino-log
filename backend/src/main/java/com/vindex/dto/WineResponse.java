@@ -12,10 +12,12 @@ public class WineResponse {
     private String imageUrl;
     private String location;
     private Integer rowId;
+    private Double alcoholPercentage;
+    private String grapeVariety;
 
     public WineResponse(Long id, String name, String type, String vintage, Integer quantity,
                         String winery, String region, String country, String imageUrl, 
-                        String location, Integer rowId) {
+                        String location, Integer rowId, Double alcoholPercentage, String grapeVariety) {
         this.id = id;
         this.name = name;
         this.type = type;
@@ -27,6 +29,8 @@ public class WineResponse {
         this.imageUrl = imageUrl;
         this.location = location;
         this.rowId = rowId;
+        this.alcoholPercentage = alcoholPercentage;
+        this.grapeVariety = grapeVariety;
     }
 
     public Long getId() {
@@ -71,5 +75,13 @@ public class WineResponse {
 
     public Integer getRowId() {
         return rowId;
+    }
+
+    public Double getAlcoholPercentage() {
+        return alcoholPercentage;
+    }
+
+    public String getGrapeVariety() {
+        return grapeVariety;
     }
 }

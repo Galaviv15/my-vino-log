@@ -18,6 +18,8 @@ public class WineRequest {
     private String imageUrl;
     private String location = "CELLAR";
     private Integer rowId;
+    private Double alcoholPercentage;
+    private String grapeVariety;
 
     public String getName() {
         return name;
@@ -97,5 +99,21 @@ public class WineRequest {
 
     public void setRowId(Integer rowId) {
         this.rowId = rowId;
+    }
+
+    public Double getAlcoholPercentage() {
+        return alcoholPercentage;
+    }
+
+    public void setAlcoholPercentage(Double alcoholPercentage) {
+        this.alcoholPercentage = alcoholPercentage;
+    }
+
+    public String getGrapeVariety() {
+        return grapeVariety;
+    }
+
+    public void setGrapeVariety(String grapeVariety) {
+        this.grapeVariety = grapeVariety;
     }
 }

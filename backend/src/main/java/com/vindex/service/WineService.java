@@ -77,6 +77,8 @@ public class WineService {
         wine.setCountry(trimToNull(request.getCountry()));
         wine.setLocation(toWineLocation(request.getLocation()));
         wine.setRowId(request.getRowId());
+        wine.setAlcoholPercentage(request.getAlcoholPercentage());
+        wine.setGrapeVariety(trimToNull(request.getGrapeVariety()));
 
         String imageUrl = trimToNull(request.getImageUrl());
         wine.setImageUrl(imageUrl == null ? DEFAULT_IMAGE : imageUrl);
@@ -158,7 +160,9 @@ public class WineService {
                 wine.getCountry(),
                 wine.getImageUrl(),
                 location,
-                wine.getRowId()
+                wine.getRowId(),
+                wine.getAlcoholPercentage(),
+                wine.getGrapeVariety()
         );
     }
 
