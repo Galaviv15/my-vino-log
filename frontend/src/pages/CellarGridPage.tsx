@@ -958,7 +958,7 @@ export default function CellarGridPage() {
                                               '/wine-placeholder.svg'
                                             }
                                             alt="Wine"
-                                            className="w-10 h-10 rounded object-cover border-2 border-gray-300"
+                                            className="w-10 h-10 rounded object-contain border-2 border-gray-300 bg-gray-50"
                                             onError={(e) => {
                                               (e.target as HTMLImageElement).src = '/wine-placeholder.svg';
                                             }}
@@ -1012,7 +1012,7 @@ export default function CellarGridPage() {
                 <img
                   src={getImageUrl(selectedWine.imageUrl) || '/wine-placeholder.svg'}
                   alt={selectedWine.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/wine-placeholder.svg';
                   }}
@@ -1134,7 +1134,7 @@ export default function CellarGridPage() {
                     </button>
                   </div>
                   
-                  {/* Delete Image Button */}
+                  {/* Delete Image Button - Hidden to prevent 401 errors 
                   {selectedWine.imageUrl && (
                     <button
                       onClick={() => handleImageDelete(selectedWine.id)}
@@ -1144,6 +1144,7 @@ export default function CellarGridPage() {
                       {uploadingImageId === selectedWine.id ? '...' : '🗑️ Delete Image'}
                     </button>
                   )}
+                  */}
                 </div>
               </div>
             </div>
