@@ -42,7 +42,7 @@
 - [x] `public/manifest.json` - PWA manifest
 
 ## Project Configuration
-- [x] `docker-compose.yml` - Docker orchestration
+- [x] `scripts/` - Server management scripts
 - [x] `.env.example` - Environment variables template
 - [x] `.gitignore` (root) - Git exclusions
 - [x] `backend/.gitignore` - Backend Git exclusions
@@ -127,8 +127,8 @@ find backend/src -name "*.java" | wc -l
 # Check frontend structure
 find frontend/src -name "*.tsx" -o -name "*.ts" | wc -l
 
-# Verify Docker setup
-docker-compose config
+# Verify scripts are executable
+ls -la scripts/
 
 # Count documentation lines
 wc -l README.md PHASE_1_SUMMARY.md QUICK_REFERENCE.md

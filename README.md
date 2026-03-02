@@ -348,11 +348,12 @@ lsof -ti:5173 | xargs kill -9
 
 ### Database Connection Issues
 ```bash
-# Check MySQL container
-docker-compose logs mysql
+# Check MySQL process
+lsof -ti:3306
 
-# Restart services
-docker-compose down && docker-compose up -d
+# Restart backend service
+./scripts/stop-backend.sh
+./scripts/start-backend.sh
 ```
 
 ### Frontend API Connection Issues

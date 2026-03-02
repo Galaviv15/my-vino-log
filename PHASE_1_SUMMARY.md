@@ -32,8 +32,8 @@
 - ✅ Proper exception handling ready
 
 **Infrastructure:**
-- ✅ `Dockerfile` - Multi-stage build for production
-- ✅ `docker-compose.yml` - MySQL + Backend orchestration
+- ✅ `scripts/` - Server management scripts for development
+- ✅ Local MySQL setup with script-based orchestration
 
 ---
 
@@ -132,14 +132,19 @@
 
 ### To Run the Project:
 
-**Docker (Recommended):**
+**Using Scripts (Recommended):**
 ```bash
-docker-compose up -d
+# Terminal 1
+./scripts/start-backend.sh
+
+# Terminal 2  
+./scripts/start-frontend.sh
+
 # Frontend: http://localhost:5173
 # Backend: http://localhost:8080
 ```
 
-**Local Development:**
+**Manual Development:**
 ```bash
 # Terminal 1
 cd backend && mvn spring-boot:run
