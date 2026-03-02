@@ -1,5 +1,5 @@
 #!/bin/bash
-# Development setup script
+# Development setup script - for local environment new machines (Java 21, Maven, Node 18+)
 
 echo "🍷 Setting up Vindex Wine Cellar..."
 
