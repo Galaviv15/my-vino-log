@@ -1,5 +1,8 @@
 package com.vindex.dto;
 
+
+
+
 public class WineResponse {
     private Long id;
     private String name;
@@ -15,6 +18,9 @@ public class WineResponse {
     private Double alcoholPercentage;
     private String grapeVariety;
 
+public WineResponse() {
+    
+}
     public WineResponse(Long id, String name, String type, String vintage, Integer quantity,
                         String winery, String region, String country, String imageUrl, 
                         String location, Integer rowId, Double alcoholPercentage, String grapeVariety) {
