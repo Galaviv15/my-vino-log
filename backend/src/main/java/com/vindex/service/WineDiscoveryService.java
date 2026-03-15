@@ -182,7 +182,41 @@ public class WineDiscoveryService {
             log.info("No wine image found, will use placeholder");
         }
 
-        // Step 6: Save to database
+        // Step 6: Save to database (or merge with existing canonical row)
+        Optional<GlobalWine> existingCanonicalWine = globalWineRepository
+                .findByWineryAndWineNameAndVintage(
+                        discoveredWine.getWinery(),
+                        discoveredWine.getWineName(),
+                        discoveredWine.getVintage()
+                );
+
+        if (existingCanonicalWine.isPresent()) {
+            GlobalWine existing = existingCanonicalWine.get();
+
+            if ((existing.getGrapes() == null || existing.getGrapes().isEmpty()) &&
+                    discoveredWine.getGrapes() != null && !discoveredWine.getGrapes().isEmpty()) {
+                existing.setGrapes(discoveredWine.getGrapes());
+            }
+            if (existing.getAlcoholContent() == null && discoveredWine.getAlcoholContent() != null) {
+                existing.setAlcoholContent(discoveredWine.getAlcoholContent());
+            }
+            if ((existing.getRegion() == null || existing.getRegion().isBlank() || "Unknown".equalsIgnoreCase(existing.getRegion())) &&
+                    discoveredWine.getRegion() != null && !discoveredWine.getRegion().isBlank()) {
+                existing.setRegion(discoveredWine.getRegion());
+            }
+            if ((existing.getImageUrl() == null || existing.getImageUrl().isBlank() || existing.getImageUrl().contains("placeholder")) &&
+                    discoveredWine.getImageUrl() != null && !discoveredWine.getImageUrl().isBlank()) {
+                existing.setImageUrl(discoveredWine.getImageUrl());
+            }
+            if ((existing.getType() == null || existing.getType().isBlank()) && discoveredWine.getType() != null) {
+                existing.setType(discoveredWine.getType());
+            }
+
+            GlobalWine updatedExisting = globalWineRepository.save(existing);
+            log.info("Canonical wine already exists, returning existing ID: {}", updatedExisting.getId());
+            return updatedExisting;
+        }
+
         GlobalWine savedWine = globalWineRepository.save(discoveredWine);
         log.info("Wine saved successfully with ID: {}", savedWine.getId());
 
@@ -380,16 +414,16 @@ public class WineDiscoveryService {
                 candidate.winery = extractWineryFromTitle(title, originalWinery);
                 log.debug("Source {}: Winery '{}' -> '{}'", sourceIndex, originalWinery, candidate.winery);
             } catch (Exception e) {
-                candidate.winery = capitalizeWineName(originalWinery);
-                log.debug("Source {}: Winery extraction failed, using fallback: '{}'", sourceIndex, candidate.winery);
+                candidate.winery = inferWineryFromTitle(title, new String[]{});
+                log.debug("Source {}: Winery extraction failed, inferred from title: '{}'", sourceIndex, candidate.winery);
             }
             
             try {
                 candidate.wineName = extractWineNameFromTitle(title, originalWineName);
                 log.debug("Source {}: Wine name '{}' -> '{}'", sourceIndex, originalWineName, candidate.wineName);
             } catch (Exception e) {
-                candidate.wineName = capitalizeWineName(originalWineName);
-                log.debug("Source {}: Wine name extraction failed, using fallback: '{}'", sourceIndex, candidate.wineName);
+                candidate.wineName = inferWineNameFromTitle(title);
+                log.debug("Source {}: Wine name extraction failed, inferred from title: '{}'", sourceIndex, candidate.wineName);
             }
             
             // Extract additional data from snippet
@@ -419,14 +453,10 @@ public class WineDiscoveryService {
     private GlobalWine buildFinalWineFromCandidates(List<WineCandidate> candidates, String originalWinery, String originalWineName, String vintage) {
         GlobalWine wine = new GlobalWine();
         
-        // Choose best winery name (highest quality score with valid winery)
-        WineCandidate bestWineryCandidate = candidates.stream()
-                .filter(c -> c.winery != null && !c.winery.trim().isEmpty())
-                .max((c1, c2) -> Integer.compare(c1.qualityScore, c2.qualityScore))
-                .orElse(candidates.get(0));
-        
-        wine.setWinery(bestWineryCandidate.winery);
-        log.info("🏆 Best winery from source {}: '{}'", bestWineryCandidate.sourceIndex, wine.getWinery());
+        // Choose best winery name using multi-source agreement.
+        String bestWinery = chooseBestWineryName(candidates);
+        wine.setWinery(bestWinery);
+        log.info("🏆 Best winery: '{}'", wine.getWinery());
         
         // Choose best wine name (cross-validate for spelling corrections)
         String bestWineName = chooseBestWineName(candidates, originalWineName);
@@ -465,7 +495,7 @@ public class WineDiscoveryService {
         }
         
         if (nameFrequency.isEmpty()) {
-            return capitalizeWineName(originalWineName);
+            return null;
         }
         
         // Find most frequent name with highest quality
@@ -477,12 +507,41 @@ public class WineDiscoveryService {
                     return Integer.compare(nameQuality.get(e1.getKey()), nameQuality.get(e2.getKey()));
                 })
                 .map(Map.Entry::getKey)
-                .orElse(capitalizeWineName(originalWineName));
+                .orElse(null);
         
         log.info("🔍 Wine name analysis: {} candidates, best: '{}' (frequency: {}, quality: {})", 
                 nameFrequency.size(), bestName, nameFrequency.get(bestName), nameQuality.get(bestName));
         
         return bestName;
+    }
+
+    /**
+     * Choose the best winery name from multiple candidates using cross-validation.
+     */
+    private String chooseBestWineryName(List<WineCandidate> candidates) {
+        Map<String, Integer> wineryFrequency = new HashMap<>();
+        Map<String, Integer> wineryQuality = new HashMap<>();
+
+        for (WineCandidate candidate : candidates) {
+            if (candidate.winery != null && !candidate.winery.trim().isEmpty()) {
+                String winery = candidate.winery.trim();
+                wineryFrequency.put(winery, wineryFrequency.getOrDefault(winery, 0) + 1);
+                wineryQuality.put(winery, Math.max(wineryQuality.getOrDefault(winery, 0), candidate.qualityScore));
+            }
+        }
+
+        if (wineryFrequency.isEmpty()) {
+            return null;
+        }
+
+        return wineryFrequency.entrySet().stream()
+                .max((e1, e2) -> {
+                    int freqCompare = Integer.compare(e1.getValue(), e2.getValue());
+                    if (freqCompare != 0) return freqCompare;
+                    return Integer.compare(wineryQuality.get(e1.getKey()), wineryQuality.get(e2.getKey()));
+                })
+                .map(Map.Entry::getKey)
+                .orElse(null);
     }
     
     /**
@@ -610,7 +669,7 @@ public class WineDiscoveryService {
             return null;
         }
         
-        String[] titleWords = title.split("[\\\\s\\\\-,\\\\.]+");
+        String[] titleWords = title.split("[\\s,.-]+");
         String bestMatch = null;
         int bestScore = Integer.MAX_VALUE;
         int maxAllowedDistance = Math.max(1, userInput.length() / 3); // Allow up to 1/3 of characters to be different
@@ -649,7 +708,7 @@ public class WineDiscoveryService {
      */
     private String extractWineryFromTitle(String title, String userInputWinery) {
         if (title == null || title.isEmpty() || userInputWinery == null) {
-            return capitalizeWineName(userInputWinery);
+            return null;
         }
         
         // Common winery patterns in titles
@@ -665,6 +724,12 @@ public class WineDiscoveryService {
         if (bestMatch != null) {
             return bestMatch;
         }
+
+        // If user input is misspelled, try to infer a canonical winery from title directly.
+        String inferredWinery = inferWineryFromTitle(title, wineryPatterns);
+        if (inferredWinery != null) {
+            return inferredWinery;
+        }
         
         // Fallback: look for exact substring match with proper capitalization
         String lowerTitle = title.toLowerCase();
@@ -677,8 +742,8 @@ public class WineDiscoveryService {
             }
         }
         
-        // Final fallback: capitalize user input properly
-        return capitalizeWineName(userInputWinery);
+        // Do not fallback to user input here to avoid persisting typo values.
+        return null;
     }
     
     /**
@@ -686,7 +751,7 @@ public class WineDiscoveryService {
      */
     private String extractWineNameFromTitle(String title, String userInputWineName) {
         if (title == null || title.isEmpty() || userInputWineName == null) {
-            return capitalizeWineName(userInputWineName);
+            return null;
         }
         
         log.debug("🔍 Extracting wine name from title: '{}' | User input: '{}'", title, userInputWineName);
@@ -724,7 +789,7 @@ public class WineDiscoveryService {
                 String wordMatch = findBestMatchInTitle(title, userWord, winePatterns);
                 if (wordMatch == null) {
                     // Try direct word matching
-                    String[] titleWords = title.split("[\\\\s\\\\-,\\\\.]+");
+                    String[] titleWords = title.split("[\\s,.-]+");
                     for (String titleWord : titleWords) {
                         if (calculateLevenshteinDistance(userWord, titleWord) <= Math.max(1, userWord.length() / 3)) {
                             wordMatch = titleWord;
@@ -757,9 +822,76 @@ public class WineDiscoveryService {
             }
         }
         
-        log.debug("❌ No match found, using fallback: '{}'", capitalizeWineName(userInputWineName));
-        // Final fallback: capitalize user input properly
-        return capitalizeWineName(userInputWineName);
+        log.debug("❌ No canonical wine name match found in title");
+        // Infer canonical wine label from title words (without using raw user input).
+        return inferWineNameFromTitle(title);
+    }
+
+    /**
+     * Infer canonical winery name from search result title.
+     */
+    private String inferWineryFromTitle(String title, String[] wineryPatterns) {
+        if (title == null || title.isBlank()) {
+            return null;
+        }
+
+        String cleanTitle = title.replaceAll("\\|.*$", "").trim();
+        cleanTitle = cleanTitle.replaceAll("\\s*-\\s*[^-]*$", "").trim();
+
+        // Prefer known winery patterns when found in the title.
+        for (String pattern : wineryPatterns) {
+            if (cleanTitle.toLowerCase().contains(pattern.toLowerCase())) {
+                return capitalizeWineName(pattern);
+            }
+        }
+
+        // Common title format: "<Winery> [Winery] <Label> <Year>"
+        String[] parts = cleanTitle.split("\\s+");
+        if (parts.length == 0) {
+            return null;
+        }
+
+        String first = parts[0].replaceAll("[^A-Za-zÀ-ÿ'’.-]", "").trim();
+        if (!first.isEmpty() && !first.equalsIgnoreCase("wine")) {
+            return capitalizeWineName(first);
+        }
+
+        return null;
+    }
+
+    /**
+     * Infer canonical wine name from title without relying on user input.
+     */
+    private String inferWineNameFromTitle(String title) {
+        if (title == null || title.isBlank()) {
+            return null;
+        }
+
+        String cleanTitle = title.replaceAll("\\|.*$", "").trim();
+        cleanTitle = cleanTitle.replaceAll("\\s*-\\s*[^-]*$", "").trim();
+        cleanTitle = cleanTitle.replaceAll("\\b(19|20)\\d{2}\\b", "").trim();
+
+        String[] tokens = cleanTitle.split("\\s+");
+        if (tokens.length < 2) {
+            return null;
+        }
+
+        // Skip winery token and optional literal "Winery", then take first label token.
+        int idx = 1;
+        if (tokens.length > 1 && tokens[1].equalsIgnoreCase("winery")) {
+            idx = 2;
+        }
+
+        if (idx >= tokens.length) {
+            return null;
+        }
+
+        String candidate = tokens[idx].replaceAll("[^A-Za-zÀ-ÿ'’.-]", "").trim();
+        if (candidate.isEmpty()) {
+            return null;
+        }
+
+        return capitalizeWineName(candidate);
     }
     
     /**
